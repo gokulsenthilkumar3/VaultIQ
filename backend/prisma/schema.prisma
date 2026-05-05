@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  RETIRED
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  fullName         String
+  role             Role              @default(USER)
+  azureId          String            @unique
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assignments      AssetAssignment[]
+  auditLogs        AuditLog[]
+}
+
+model Asset {
+  id               String            @id @default(uuid())
+  tagId            String            @unique // QR/Barcode content
+  serialNumber     String            @unique
+  modelName        String
+  typeId           String
+  locationId       String
+  status           AssetStatus       @default(AVAILABLE)
+  purchasePrice    Float
+  purchaseDate     DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  
+  type             AssetType         @relation(fields: [typeId], references: [id])
+  location         Location          @relation(fields: [locationId], references: [id])
+  assignments      AssetAssignment[]
+  maintenance      MaintenanceRecord[]
+}
+
+model AssetAssignment {
+  id               String    @id @default(uuid())
+  assetId          String
+  userId           String
+  assignedAt       DateTime  @default(now())
+  returnedAt       DateTime?
+  signatureBlob    String?   // Base64 or URL
+  conditionNotes   String?
+  
+  asset            Asset     @relation(fields: [assetId], references: [id])
+  user             User      @relation(fields: [userId], references: [id])
+}
+
+model MaintenanceRecord {
+  id               String            @id @default(uuid())
+  assetId          String
+  issueType        String
+  description      String
+  status           MaintenanceStatus @default(OPEN)
+  scheduledDate    DateTime
+  completedAt      DateTime?
+  technicianNotes  String?
+  
+  asset            Asset             @relation(fields: [assetId], references: [id])
+}
+
+model AssetType {
+  id               String    @id @default(uuid())
+  name             String    @unique
+  lifespanYears    Int
+  assets           Asset[]
+}
+
+model Location {
+  id               String    @id @default(uuid())
+  name             String    @unique
+  address          String
+  assets           Asset[]
+}
+
+model AuditLog {
+  id               String    @id @default(uuid())
+  action           String
+  assetId          String?
+  userId           String
+  details          String
+  timestamp        DateTime  @default(now())
+  
+  user             User      @relation(fields: [userId], references: [id])
+}

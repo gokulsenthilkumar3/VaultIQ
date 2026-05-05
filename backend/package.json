@@ -1,0 +1,20 @@
+{
+  "name": "vaultiq-backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start:dev": "nest start --watch"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@prisma/client": "^5.13.0",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "@types/node": "^20.3.1",
+    "prisma": "^5.13.0",
+    "typescript": "^5.1.3"
+  }
+}

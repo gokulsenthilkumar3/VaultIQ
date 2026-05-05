@@ -28,13 +28,13 @@ export default function AssetScanner({ onScanSuccess }: ScannerProps) {
     );
 
     scannerRef.current.render(
-      (decodedText) => {
+      (decodedText: string) => {
         // Success callback
         onScanSuccess(decodedText);
         // Optionally stop scanning after first success
         // scannerRef.current?.clear();
       },
-      (errorMessage) => {
+      (errorMessage: string) => {
         // We don't necessarily want to alert on every scan failure (which happens every frame)
         // console.warn(errorMessage);
       }
@@ -43,7 +43,7 @@ export default function AssetScanner({ onScanSuccess }: ScannerProps) {
     // Cleanup on unmount
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+        scannerRef.current.clear().catch((err: any) => console.error("Failed to clear scanner", err));
       }
     };
   }, [onScanSuccess]);

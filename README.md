@@ -84,7 +84,6 @@ Heuristic and ML-based engine that analyzes temperature, usage hours, and perfor
    ```
 
 4. **Run Development Servers**:
-
    ```bash
    # In separate terminals
    npm run dev (frontend)

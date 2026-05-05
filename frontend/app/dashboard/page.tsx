@@ -2,10 +2,10 @@ import React from 'react';
 
 export default function Dashboard() {
   const stats = [
-    { label: 'Total Assets', value: '1,248', trend: '+12%', color: 'var(--accent-primary)' },
-    { label: 'Assigned', value: '842', trend: '67%', color: 'var(--accent-success)' },
-    { label: 'In Maintenance', value: '24', trend: '-2%', color: 'var(--accent-warning)' },
-    { label: 'Monthly Depreciation', value: '$4,120', trend: '+5%', color: 'var(--accent-danger)' },
+    { label: 'Total Assets', value: '1,248', trend: '+12%', status: 'primary' },
+    { label: 'Assigned', value: '842', trend: '67%', status: 'success' },
+    { label: 'In Maintenance', value: '24', trend: '-2%', status: 'warning' },
+    { label: 'Monthly Depreciation', value: '$4,120', trend: '+5%', status: 'danger' },
   ];
 
   const recentActivities = [
@@ -23,11 +23,11 @@ export default function Dashboard() {
 
       <section className="stats-grid">
         {stats.map((stat, i) => (
-          <div key={i} className="card stat-card animate-fade-in" style={{ '--delay': `${i * 0.1}s` } as React.CSSProperties}>
+          <div key={i} className="card stat-card animate-fade-in" data-index={i}>
             <p className="stat-label">{stat.label}</p>
             <div className="stat-value-row">
               <h2 className="stat-value">{stat.value}</h2>
-              <span className="stat-trend" style={{ '--trend-color': stat.color } as React.CSSProperties}>{stat.trend}</span>
+              <span className="stat-trend" data-status={stat.status}>{stat.trend}</span>
             </div>
           </div>
         ))}
@@ -86,8 +86,12 @@ export default function Dashboard() {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          animation-delay: var(--delay);
         }
+
+        .stat-card[data-index="0"] { animation-delay: 0s; }
+        .stat-card[data-index="1"] { animation-delay: 0.1s; }
+        .stat-card[data-index="2"] { animation-delay: 0.2s; }
+        .stat-card[data-index="3"] { animation-delay: 0.3s; }
 
         .stat-label {
           font-size: 0.85rem;
@@ -114,8 +118,12 @@ export default function Dashboard() {
           padding: 4px 8px;
           background: rgba(255, 255, 255, 0.05);
           border-radius: 6px;
-          color: var(--trend-color);
         }
+
+        .stat-trend[data-status="primary"] { color: var(--accent-primary); }
+        .stat-trend[data-status="success"] { color: var(--accent-success); }
+        .stat-trend[data-status="warning"] { color: var(--accent-warning); }
+        .stat-trend[data-status="danger"] { color: var(--accent-danger); }
 
         .dashboard-content-grid {
           display: grid;

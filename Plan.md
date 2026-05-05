@@ -1,3 +1,5 @@
+# Office Asset Management System Plan
+
 Purpose:
 Track all physical and digital assets (laptops, monitors, furniture, software licences, etc.), their assignment to employees, maintenance history, location, depreciation, and audit logs.
 

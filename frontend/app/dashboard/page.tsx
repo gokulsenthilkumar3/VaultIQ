@@ -23,11 +23,11 @@ export default function Dashboard() {
 
       <section className="stats-grid">
         {stats.map((stat, i) => (
-          <div key={i} className="card stat-card animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+          <div key={i} className="card stat-card animate-fade-in" style={{ '--delay': `${i * 0.1}s` } as React.CSSProperties}>
             <p className="stat-label">{stat.label}</p>
             <div className="stat-value-row">
               <h2 className="stat-value">{stat.value}</h2>
-              <span className="stat-trend" style={{ color: stat.color }}>{stat.trend}</span>
+              <span className="stat-trend" style={{ '--trend-color': stat.color } as React.CSSProperties}>{stat.trend}</span>
             </div>
           </div>
         ))}
@@ -53,7 +53,7 @@ export default function Dashboard() {
           <h3 className="section-title">Maintenance Queue</h3>
           <div className="empty-state">
             <p>Everything is running smoothly.</p>
-            <button className="btn btn-primary" style={{ marginTop: '16px' }}>View Schedule</button>
+            <button className="btn btn-primary btn-maintenance">View Schedule</button>
           </div>
         </section>
       </div>
@@ -86,6 +86,7 @@ export default function Dashboard() {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          animation-delay: var(--delay);
         }
 
         .stat-label {
@@ -113,6 +114,7 @@ export default function Dashboard() {
           padding: 4px 8px;
           background: rgba(255, 255, 255, 0.05);
           border-radius: 6px;
+          color: var(--trend-color);
         }
 
         .dashboard-content-grid {
@@ -173,6 +175,10 @@ export default function Dashboard() {
           justify-content: center;
           height: 200px;
           color: var(--text-secondary);
+        }
+
+        .btn-maintenance {
+          margin-top: 16px;
         }
       `}</style>
     </div>

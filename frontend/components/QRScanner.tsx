@@ -50,7 +50,7 @@ export default function AssetScanner({ onScanSuccess }: ScannerProps) {
 
   return (
     <div className="scanner-container">
-      <div id="qr-reader" style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}></div>
+      <div id="qr-reader"></div>
       {error && <p className="error-text">{error}</p>}
       
       <style jsx>{`
@@ -60,6 +60,11 @@ export default function AssetScanner({ onScanSuccess }: ScannerProps) {
           border-radius: 16px;
           backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #qr-reader {
+          width: 100%;
+          max-width: 500px;
+          margin: 0 auto;
         }
         .error-text {
           color: #ff4d4d;

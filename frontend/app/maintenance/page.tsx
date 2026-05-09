@@ -7,8 +7,34 @@ import { apiFetch } from '../../lib/api';
 export default function MaintenancePage() {
   const { data: queue, error, isLoading } = useSWR('/maintenance/triage', apiFetch);
 
-  if (error) return <div>Failed to load triage queue.</div>;
-  if (isLoading) return <div className="loading">Initializing Predictive Diagnostics...</div>;
+  if (error) {
+    return (
+      <div className="maintenance-container">
+        <header>
+          <h1 className="page-title">Predictive Maintenance</h1>
+        </header>
+        <div className="card glass" style={{ padding: '40px', textAlign: 'center' }}>
+          <h3 style={{ color: 'var(--accent-danger)' }}>Connection Error</h3>
+          <p style={{ color: 'var(--text-secondary)' }}>Failed to load the triage queue. Please ensure backend services are responsive.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="maintenance-container">
+        <header>
+          <h1 className="page-title skeleton-text">Predictive Maintenance</h1>
+          <p className="page-subtitle skeleton-text">Initializing Diagnostics...</p>
+        </header>
+        <div className="maintenance-grid">
+          <section className="card glass queue-section skeleton-box" style={{ height: '300px' }}></section>
+          <section className="card glass health-insights skeleton-box" style={{ height: '300px' }}></section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="maintenance-container">

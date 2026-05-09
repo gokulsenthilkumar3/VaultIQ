@@ -24,10 +24,12 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage('');
     try {
       await apiFetch('/assets', {
         method: 'POST',
@@ -39,9 +41,9 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
       });
       onSuccess();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to register asset. Check serial number uniqueness.');
+      setErrorMessage(err.message || 'Failed to register asset. Check serial number uniqueness.');
     } finally {
       setIsSubmitting(false);
     }
@@ -56,6 +58,7 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
         </header>
 
         <form onSubmit={handleSubmit} className="modal-body">
+          {errorMessage && <div className="error-toast">{errorMessage}</div>}
           <div className="form-grid">
             <div className="input-group">
               <label>Model Name</label>
@@ -190,6 +193,17 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
           justify-content: flex-end;
           gap: 16px;
           margin-top: 32px;
+        }
+
+        .error-toast {
+          background: rgba(255, 77, 77, 0.1);
+          border: 1px solid rgba(255, 77, 77, 0.3);
+          color: #ff4d4d;
+          padding: 12px;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          margin-bottom: 16px;
         }
 
         @keyframes slideUp {

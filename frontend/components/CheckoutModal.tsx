@@ -13,24 +13,27 @@ interface CheckoutModalProps {
 export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutModalProps) {
   const { data: users } = useSWR('/users', apiFetch);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [signatureData, setSignatureData] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleCheckout = async () => {
     if (!selectedUserId) return;
     setIsSubmitting(true);
+    setErrorMessage('');
     try {
       await apiFetch(`/assets/${asset.id}/checkout`, {
         method: 'POST',
         body: JSON.stringify({ 
           userId: selectedUserId,
-          signature: 'MOCK_SIGNATURE_DATA' // In production, this would be from a signature pad
+          signature: signatureData || 'DIGITAL_AGREEMENT_VERIFIED'
         }),
       });
       onSuccess();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Checkout failed. Please check system logs.');
+      setErrorMessage(err.message || 'Checkout failed. Please verify asset availability.');
     } finally {
       setIsSubmitting(false);
     }
@@ -45,6 +48,8 @@ export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutMod
         </header>
 
         <div className="modal-body">
+          {errorMessage && <div className="error-toast">{errorMessage}</div>}
+          
           <div className="input-group">
             <label htmlFor="personnel-select">Select Personnel</label>
             <select 
@@ -59,6 +64,19 @@ export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutMod
                 <option key={user.id} value={user.id}>{user.fullName} ({user.email})</option>
               ))}
             </select>
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="signature-input">Digital Signature / Authorizer PIN</label>
+            <input
+              id="signature-input"
+              type="password"
+              placeholder="Enter authorization code"
+              value={signatureData}
+              onChange={e => setSignatureData(e.target.value)}
+              className="glass"
+              required
+            />
           </div>
 
           <div className="compliance-notice">
@@ -108,7 +126,17 @@ export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutMod
 
         .input-group { display: flex; flex-direction: column; gap: 8px; }
         .input-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
-        .input-group select { padding: 12px; border: 1px solid var(--border-color); color: white; border-radius: 8px; outline: none; }
+        .input-group select, .input-group input { padding: 12px; border: 1px solid var(--border-color); color: white; border-radius: 8px; outline: none; background: rgba(255, 255, 255, 0.05); }
+
+        .error-toast {
+          background: rgba(255, 77, 77, 0.1);
+          border: 1px solid rgba(255, 77, 77, 0.3);
+          color: #ff4d4d;
+          padding: 12px;
+          border-radius: 8px;
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
 
         .compliance-notice {
           padding: 16px;

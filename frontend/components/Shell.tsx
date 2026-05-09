@@ -80,14 +80,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
       <main className="main-content">
         <header className="top-bar">
-          <div className="search-box">
-            <input
-              type="search"
-              placeholder="Search assets, tags, users…"
-              className="glass"
-              aria-label="Search assets"
-            />
-          </div>
+          <div className="top-bar-spacer"></div>
           <div className="actions">
             <RoleGuard roles={['ADMIN', 'MANAGER']}>
               <button

@@ -3,7 +3,19 @@
 import React from 'react';
 import QRScanner from '../../components/QRScanner';
 
+import { useRouter } from 'next/navigation';
+
 export default function ScannerPage() {
+  const router = useRouter();
+
+  const handleScan = (data: string) => {
+    console.log('Scanned:', data);
+    // Assuming the QR code contains the Asset ID or Tag ID.
+    // If it's a Tag ID, we might need a lookup, but for now we route to the ID page
+    // Assuming the QR contains the UUID for simplicity, or we route to a search endpoint
+    router.push(`/inventory/${data}`);
+  };
+
   return (
     <div className="scanner-container">
       <header>
@@ -13,7 +25,7 @@ export default function ScannerPage() {
 
       <div className="scanner-main card glass">
         <div className="scanner-viewport">
-          <QRScanner onScanSuccess={(data: string) => console.log('Scanned:', data)} />
+          <QRScanner onScanSuccess={handleScan} />
         </div>
         
         <div className="scanner-instructions">

@@ -32,16 +32,23 @@ Heuristic and ML-based engine that analyzes temperature, usage hours, and perfor
 ### Frontend
 
 - **Framework**: Next.js 14+ (App Router)
+
 - **Visualization**: Three.js (Digital Twin Engine)
+
 - **Styling**: Vanilla CSS + Glassmorphism Design System
+
 - **Scanning**: HTML5 QR Code (Camera-based)
 
 ### Backend (Microservices)
 
 - **Core**: NestJS (Node.js)
+
 - **Database**: PostgreSQL with Prisma ORM
+
 - **Cache**: Redis
+
 - **Security**: Azure AD SSO + RBAC Middleware
+
 - **Hashing**: Crypto-based SHA-256 Chain
 
 ---
@@ -84,6 +91,7 @@ Heuristic and ML-based engine that analyzes temperature, usage hours, and perfor
    ```
 
 4. **Run Development Servers**:
+
    ```bash
    # In separate terminals
    npm run dev (frontend)

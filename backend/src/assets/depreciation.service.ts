@@ -12,10 +12,17 @@ export class DepreciationService {
     const ageInMonths = (now.getFullYear() - purchaseDate.getFullYear()) * 12 + (now.getMonth() - purchaseDate.getMonth());
     const lifespanMonths = lifespanYears * 12;
     
-    if (ageInMonths >= lifespanMonths) return 0;
+    const salvageValue = purchasePrice * 0.1;
+    if (ageInMonths >= lifespanMonths) {
+      return {
+        currentValue: salvageValue,
+        monthlyDepreciation: 0,
+        totalDepreciated: purchasePrice - salvageValue,
+        remainingMonths: 0,
+      };
+    }
     
     // Assume 10% salvage value for enterprise hardware
-    const salvageValue = purchasePrice * 0.1;
     const depreciableAmount = purchasePrice - salvageValue;
     const monthlyDepreciation = depreciableAmount / lifespanMonths;
     

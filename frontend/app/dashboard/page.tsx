@@ -3,6 +3,7 @@
 import React from 'react';
 import useSWR from 'swr';
 import { apiFetch } from '../../lib/api';
+import { Laptop, RotateCcw, Wrench } from 'lucide-react';
 
 export default function Dashboard() {
   const { data, error, isLoading } = useSWR('/assets/summary', apiFetch);
@@ -16,8 +17,14 @@ export default function Dashboard() {
     { label: 'Total Assets', value: summary.stats.total.toLocaleString(), trend: '+0%', status: 'primary' },
     { label: 'Assigned', value: summary.stats.assigned.toLocaleString(), trend: `${Math.round(summary.stats.utilization)}%`, status: 'success' },
     { label: 'In Maintenance', value: summary.stats.maintenance.toLocaleString(), trend: '0%', status: 'warning' },
-    { label: 'Monthly Depreciation', value: '$0', trend: '+0%', status: 'danger' },
+    { label: 'Monthly Depreciation', value: `$${summary.stats.totalMonthlyDepreciation?.toLocaleString() || 0}`, trend: '+0%', status: 'danger' },
   ];
+
+  const renderIcon = (type: string) => {
+    if (type === 'checkout') return <Laptop size={20} />;
+    if (type === 'checkin') return <RotateCcw size={20} />;
+    return <Wrench size={20} />;
+  };
 
   const recentActivities = summary.recentActivities;
 
@@ -46,7 +53,7 @@ export default function Dashboard() {
           <div className="activity-list">
             {recentActivities.map((activity: any, i: number) => (
               <div key={i} className="activity-item">
-                <span className="activity-icon">{activity.icon}</span>
+                <span className="activity-icon">{renderIcon(activity.icon)}</span>
                 <div className="activity-details">
                   <p className="activity-text"><strong>{activity.user}</strong> {activity.action}</p>
                   <p className="activity-time">{new Date(activity.time).toLocaleString()}</p>

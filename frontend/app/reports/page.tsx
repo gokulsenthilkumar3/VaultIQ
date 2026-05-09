@@ -2,8 +2,25 @@
 
 import React from 'react';
 import AssetGraph from '../../components/AssetGraph';
+import { apiFetch } from '../../lib/api';
 
 export default function ReportsPage() {
+  const handleExport = async (type: string) => {
+    const endpoint = type === 'AUDIT' ? 'audit-export' : type === 'FINANCE' ? 'depreciation' : null;
+    if (!endpoint) return alert('Report template is still in development.');
+    
+    try {
+      const data = await apiFetch(`/reports/${endpoint}`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${type.toLowerCase()}-report.json`;
+      a.click();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to generate report data.');
+    }
+  };
   const reportTemplates = [
     { title: 'Asset Depreciation Schedule', description: 'Financial projection for IT asset value over 5 years.', category: 'FINANCE' },
     { title: 'Lifecycle Distribution', description: 'Breakdown of current asset age and replacement roadmap.', category: 'OPERATIONS' },
@@ -25,8 +42,8 @@ export default function ReportsPage() {
             <h3 className="report-title">{report.title}</h3>
             <p className="report-description">{report.description}</p>
             <div className="report-actions">
-              <button className="btn btn-outline">Preview</button>
-              <button className="btn btn-primary">Generate PDF</button>
+              <button className="btn btn-outline" onClick={() => handleExport(report.category)}>Preview</button>
+              <button className="btn btn-primary" onClick={() => handleExport(report.category)}>Export Data</button>
             </div>
           </div>
         ))}

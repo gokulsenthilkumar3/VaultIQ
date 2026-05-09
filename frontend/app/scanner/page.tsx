@@ -2,18 +2,26 @@
 
 import React from 'react';
 import QRScanner from '../../components/QRScanner';
-
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '../../lib/api';
 
 export default function ScannerPage() {
   const router = useRouter();
 
-  const handleScan = (data: string) => {
-    console.log('Scanned:', data);
-    // Assuming the QR code contains the Asset ID or Tag ID.
-    // If it's a Tag ID, we might need a lookup, but for now we route to the ID page
-    // Assuming the QR contains the UUID for simplicity, or we route to a search endpoint
-    router.push(`/inventory/${data}`);
+  const [scanError, setScanError] = React.useState<string | null>(null);
+
+  const handleScan = async (data: string) => {
+    try {
+      setScanError(null);
+      const asset = await apiFetch(`/assets/${data}`);
+      if (asset && asset.id) {
+        router.push(`/inventory/${asset.id}`);
+      } else {
+        setScanError('Asset not found. Check the QR code and try again.');
+      }
+    } catch {
+      setScanError('Asset not found. Check the QR code and try again.');
+    }
   };
 
   return (
@@ -28,17 +36,30 @@ export default function ScannerPage() {
           <QRScanner onScanSuccess={handleScan} />
         </div>
         
-        <div className="scanner-instructions">
-          <h3>Instructions</h3>
-          <ul>
-            <li>Position the asset QR code within the frame.</li>
-            <li>Ensure adequate lighting for optical recognition.</li>
-            <li>VaultIQ will automatically redirect to the asset lifecycle page.</li>
-          </ul>
-        </div>
+          <div className="scanner-instructions">
+            <h3>Instructions</h3>
+            <ul>
+              <li>Position the asset QR code within the frame.</li>
+              <li>Ensure adequate lighting for optical recognition.</li>
+              <li>VaultIQ will automatically redirect to the asset lifecycle page.</li>
+            </ul>
+            {scanError && (
+              <div className="error-toast glass animate-fade-in">
+                <strong>Error:</strong> {scanError}
+              </div>
+            )}
+          </div>
       </div>
 
       <style jsx>{`
+        .error-toast {
+          margin-top: 20px;
+          padding: 16px;
+          background: rgba(218, 54, 51, 0.1);
+          color: var(--accent-danger);
+          border: 1px solid rgba(218, 54, 51, 0.2);
+          border-radius: 8px;
+        }
         .scanner-container {
           display: flex;
           flex-direction: column;

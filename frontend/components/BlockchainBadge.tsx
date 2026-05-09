@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { apiFetch } from '../lib/api';
 
 interface BlockchainBadgeProps {
   assetId: string;
@@ -12,13 +13,13 @@ export default function BlockchainBadge({ assetId }: BlockchainBadgeProps) {
 
   const verifyIntegrity = async () => {
     setStatus('VERIFYING');
-    
-    // Simulate API call to backend/blockchain/verify
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const mockHash = Math.random().toString(16).substring(2, 10) + '...';
-    setLastHash(mockHash);
-    setStatus('VERIFIED');
+    try {
+      const data = await apiFetch(`/assets/${assetId}/audit-hash`);
+      setLastHash(data.hash.substring(0, 16) + '...');
+      setStatus('VERIFIED');
+    } catch {
+      setStatus('FAILED');
+    }
   };
 
   return (

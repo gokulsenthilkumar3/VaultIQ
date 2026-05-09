@@ -1,11 +1,13 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import useSWR from 'swr';
 import { apiFetch } from '../../lib/api';
+import ManageMaintenanceModal from '../../components/ManageMaintenanceModal';
 
 export default function MaintenancePage() {
-  const { data: queue, error, isLoading } = useSWR('/maintenance/triage', apiFetch);
+  const { data: queue, error, isLoading, mutate } = useSWR('/maintenance/triage', apiFetch);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
 
   if (error) {
     return (
@@ -69,7 +71,7 @@ export default function MaintenancePage() {
                       <span className={`badge ${item.status.toLowerCase()}`}>{item.status.replace('_', ' ')}</span>
                     </td>
                     <td>
-                      <button className="btn-text">Manage</button>
+                      <button className="btn-text" onClick={() => setSelectedTicket(item)}>Manage</button>
                     </td>
                   </tr>
                 ))}
@@ -180,6 +182,17 @@ export default function MaintenancePage() {
         .insight-content p { font-size: 0.9rem; color: var(--text-secondary); }
         .highlight { color: var(--accent-success); font-weight: 700; }
       `}</style>
+
+      {selectedTicket && (
+        <ManageMaintenanceModal 
+          item={selectedTicket} 
+          onClose={() => setSelectedTicket(null)}
+          onSuccess={() => {
+            mutate();
+            setSelectedTicket(null);
+          }}
+        />
+      )}
     </div>
   );
 }

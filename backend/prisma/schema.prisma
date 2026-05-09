@@ -38,6 +38,7 @@ model Asset {
   assignments      AssetAssignment[]
   maintenance      MaintenanceRecord[]
   tickets          HelpdeskTicket[]
+  auditLogs        AuditLog[]
 }
 
 model AssetAssignment {
@@ -89,6 +90,7 @@ model AuditLog {
   timestamp        DateTime  @default(now())
   
   user             User      @relation(fields: [userId], references: [id])
+  asset            Asset?    @relation(fields: [assetId], references: [id])
 }
 
 model HelpdeskTicket {

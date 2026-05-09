@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { mutate } from 'swr';
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -112,7 +113,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           onClose={() => setIsAddAssetOpen(false)}
           onSuccess={() => {
             setIsAddAssetOpen(false);
-            window.location.reload();
+            mutate('/assets');
+            mutate('/assets/summary');
           }}
         />
       )}

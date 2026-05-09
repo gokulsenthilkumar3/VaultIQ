@@ -1,11 +1,13 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards, Request, HttpCode, HttpStatus
+  Param, Body, UseGuards, Req, HttpCode, HttpStatus, Query
 } from '@nestjs/common';
 import { AssetService } from './asset.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateAssetDto } from './dto/create-asset.dto';
+import { UpdateAssetDto } from './dto/update-asset.dto';
 
 @Controller('assets')
 @UseGuards(JwtAuthGuard)
@@ -13,8 +15,8 @@ export class AssetController {
   constructor(private assetService: AssetService) {}
 
   @Get()
-  async findAll() {
-    return this.assetService.findAll();
+  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.assetService.findAll(page ? Number(page) : 1, limit ? Number(limit) : 20);
   }
 
   @Get('summary')
@@ -32,6 +34,11 @@ export class AssetController {
     return this.assetService.getLocations();
   }
 
+  @Get(':id/audit-hash')
+  async getAuditHash(@Param('id') id: string) {
+    return this.assetService.getAuditHash(id);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.assetService.findOne(id);
@@ -40,15 +47,15 @@ export class AssetController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
-  async create(@Body() body: any) {
-    return this.assetService.createAsset(body);
+  async create(@Body() createAssetDto: CreateAssetDto) {
+    return this.assetService.createAsset(createAssetDto);
   }
 
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
-  async update(@Param('id') id: string, @Body() body: any) {
-    return this.assetService.updateAsset(id, body);
+  async update(@Param('id') id: string, @Body() updateAssetDto: UpdateAssetDto) {
+    return this.assetService.updateAsset(id, updateAssetDto);
   }
 
   @Delete(':id')
@@ -60,21 +67,25 @@ export class AssetController {
   }
 
   @Post(':id/checkout')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'MANAGER')
   async checkout(
     @Param('id') assetId: string,
     @Body('userId') userId: string,
     @Body('signature') signature: string,
-    @Request() req: any,
+    @Req() req: any,
   ) {
     const requestingUserId = userId || req.user.userId;
     return this.assetService.checkoutAsset(assetId, requestingUserId, signature || '');
   }
 
   @Post(':id/checkin')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'MANAGER')
   async checkin(
     @Param('id') assetId: string,
     @Body('conditionNotes') conditionNotes: string,
-    @Request() req: any,
+    @Req() req: any,
   ) {
     return this.assetService.checkinAsset(assetId, req.user.userId, conditionNotes);
   }

@@ -6,11 +6,11 @@ import useSWR from 'swr';
 import { apiFetch } from '../../../lib/api';
 import DigitalTwin from '../../../components/DigitalTwin';
 import BlockchainBadge from '../../../components/BlockchainBadge';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Wrench } from 'lucide-react';
 
 export default function AssetDetailPage() {
   const { id } = useParams();
-  const { data: asset, error, isLoading } = useSWR(`/assets/${id}`, apiFetch);
+  const { data: asset, error, isLoading, mutate } = useSWR(`/assets/${id}`, apiFetch);
 
   if (error || !asset) return <div className="error">Failed to locate asset in the registry.</div>;
   if (isLoading) return <div className="loading">Retrieving hardware vitals...</div>;
@@ -20,7 +20,7 @@ export default function AssetDetailPage() {
   const handleReturn = async () => {
     try {
       await apiFetch(`/assets/${data.id}/checkin`, { method: 'POST', body: JSON.stringify({ conditionNotes: 'Returned via UI' }) });
-      window.location.reload();
+      mutate();
     } catch (err) {
       console.error('Failed to return asset', err);
     }
@@ -100,6 +100,26 @@ export default function AssetDetailPage() {
                 </div>
               )) : (
                 <p className="empty-text">No assignment history recorded.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="card glass assignment-card">
+            <h3 className="section-title">Maintenance History</h3>
+            <div className="history-list">
+              {data.maintenance?.length > 0 ? data.maintenance.map((m: any) => (
+                <div key={m.id} className="history-item">
+                  <div className="history-user">
+                    <span className="avatar-sm"><Wrench size={12} /></span>
+                    <span>{m.issueType}</span>
+                  </div>
+                  <div className="history-meta">
+                    <span className="date">{new Date(m.scheduledDate).toLocaleDateString()}</span>
+                    <span className={`status ${m.status.toLowerCase()}`}>{m.status.replace('_', ' ')}</span>
+                  </div>
+                </div>
+              )) : (
+                <p className="empty-text">No maintenance history recorded.</p>
               )}
             </div>
           </div>

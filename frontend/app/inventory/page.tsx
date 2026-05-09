@@ -11,12 +11,19 @@ import { Plus, ChevronRight, Search, Eye, MoveRight } from 'lucide-react';
 
 export default function InventoryPage() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: assets, error, isLoading, mutate } = useSWR('/assets', apiFetch);
 
   if (error || !assets) return <div className="error-card glass">Failed to load registry.</div>;
   if (isLoading) return <div className="loading">Syncing Digital Twin Registry...</div>;
 
-  const data = assets as any[];
+  const dataArray = Array.isArray(assets) ? assets : ((assets as any).data || []);
+  const data = dataArray as any[];
+
+  const filteredData = data.filter((asset) => 
+    asset.modelName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    asset.tagId.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="inventory-container">
@@ -28,14 +35,19 @@ export default function InventoryPage() {
         <div className="filter-group">
           <div className="search-bar glass">
             <Search size={16} className="search-icon" />
-            <input type="text" placeholder="Search assets..." />
+            <input 
+              type="text" 
+              placeholder="Search assets..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <button className="btn btn-primary"><Plus size={18} /> Register Asset</button>
         </div>
       </header>
 
       <div className="asset-grid">
-        {data.map((asset: any) => (
+        {filteredData.map((asset: any) => (
           <div key={asset.id} className="asset-card card animate-fade-in">
             <div className="twin-preview">
               <DigitalTwin 

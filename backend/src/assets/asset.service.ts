@@ -9,11 +9,18 @@ export class AssetService {
     private depreciationService: DepreciationService
   ) {}
 
-  async findAll() {
-    return this.prisma.asset.findMany({
-      include: { type: true, location: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.prisma.asset.findMany({
+        include: { type: true, location: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.asset.count(),
+    ]);
+    return { data, total, page, limit };
   }
 
   async findOne(idOrTag: string) {
@@ -141,8 +148,19 @@ export class AssetService {
     });
   }
 
+  async getAuditHash(assetId: string) {
+    const logs = await this.prisma.auditLog.findMany({
+      where: { assetId },
+      orderBy: { timestamp: 'asc' },
+    });
+    const dataString = logs.map(l => `${l.action}:${l.timestamp.toISOString()}`).join('|');
+    const { createHash } = await import('crypto');
+    const hash = createHash('sha256').update(dataString || assetId).digest('hex');
+    return { hash, count: logs.length };
+  }
+
   async getSummary() {
-    const [totalAssets, assignedAssets, maintenanceAssets, recentActivities] = await Promise.all([
+    const [totalAssets, assignedAssets, maintenanceAssets, recentActivities, allAssets] = await Promise.all([
       this.prisma.asset.count(),
       this.prisma.asset.count({ where: { status: 'ASSIGNED' } }),
       this.prisma.asset.count({ where: { status: 'MAINTENANCE' } }),
@@ -151,19 +169,32 @@ export class AssetService {
         orderBy: { timestamp: 'desc' },
         include: { user: true },
       }),
+      this.prisma.asset.findMany({ include: { type: true } })
     ]);
+
+    let totalMonthlyDepreciation = 0;
+    allAssets.forEach(asset => {
+      const dep = this.depreciationService.calculateDepreciation(
+        asset.purchasePrice,
+        asset.purchaseDate,
+        asset.type.lifespanYears
+      );
+      totalMonthlyDepreciation += dep.monthlyDepreciation;
+    });
+
     return {
       stats: {
         total: totalAssets,
         assigned: assignedAssets,
         maintenance: maintenanceAssets,
         utilization: totalAssets > 0 ? Math.round((assignedAssets / totalAssets) * 100) : 0,
+        totalMonthlyDepreciation: Math.round(totalMonthlyDepreciation),
       },
       recentActivities: recentActivities.map((log) => ({
         user: log.user.fullName,
         action: log.details,
         time: log.timestamp,
-        icon: log.action === 'CHECKOUT' ? '💻' : log.action === 'CHECKIN' ? '↩️' : '🔄',
+        icon: log.action === 'CHECKOUT' ? 'checkout' : log.action === 'CHECKIN' ? 'checkin' : 'maintenance',
       })),
     };
   }

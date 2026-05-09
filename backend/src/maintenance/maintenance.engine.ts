@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface TelemetryData {
   assetId: string;
@@ -10,7 +11,20 @@ interface TelemetryData {
 
 @Injectable()
 export class MaintenanceEngine {
-  
+  constructor(private prisma: PrismaService) {}
+
+  async getTriageQueue() {
+    return this.prisma.maintenanceRecord.findMany({
+      where: { status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      include: {
+        asset: {
+          include: { type: true }
+        }
+      },
+      orderBy: { scheduledDate: 'asc' }
+    });
+  }
+
   /**
    * Predicts the health status of an asset based on telemetry and historical lifespan.
    * Uses a heuristic-based prediction model (AI-ready).

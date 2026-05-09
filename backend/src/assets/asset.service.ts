@@ -1,9 +1,13 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { DepreciationService } from './depreciation.service';
 
 @Injectable()
 export class AssetService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private depreciationService: DepreciationService
+  ) {}
 
   /**
    * Checks out an asset to a specific user.
@@ -50,5 +54,70 @@ export class AssetService {
 
       return assignment;
     });
+  }
+
+  async findAll() {
+    return this.prisma.asset.findMany({
+      include: {
+        type: true,
+        location: true,
+      },
+    });
+  }
+
+  async findOne(id: string) {
+    const asset = await this.prisma.asset.findUnique({
+      where: { id },
+      include: {
+        type: true,
+        location: true,
+        assignments: {
+          include: { user: true },
+          orderBy: { assignedAt: 'desc' },
+        },
+        maintenance: true,
+      },
+    });
+
+    if (!asset) throw new NotFoundException('Asset not found');
+
+    const depreciation = this.depreciationService.calculateDepreciation(
+      asset.purchasePrice,
+      asset.purchaseDate,
+      asset.type.lifespanYears
+    );
+
+    return { ...asset, depreciation };
+  }
+
+  async getSummary() {
+    const totalAssets = await this.prisma.asset.count();
+    const assignedAssets = await this.prisma.asset.count({
+      where: { status: 'ASSIGNED' },
+    });
+    const maintenanceAssets = await this.prisma.asset.count({
+      where: { status: 'MAINTENANCE' },
+    });
+
+    const recentActivities = await this.prisma.auditLog.findMany({
+      take: 5,
+      orderBy: { timestamp: 'desc' },
+      include: { user: true },
+    });
+
+    return {
+      stats: {
+        total: totalAssets,
+        assigned: assignedAssets,
+        maintenance: maintenanceAssets,
+        utilization: totalAssets > 0 ? (assignedAssets / totalAssets) * 100 : 0,
+      },
+      recentActivities: recentActivities.map(log => ({
+        user: log.user.fullName,
+        action: log.details,
+        time: log.timestamp,
+        icon: log.action === 'CHECKOUT' ? '💻' : '🔄',
+      })),
+    };
   }
 }

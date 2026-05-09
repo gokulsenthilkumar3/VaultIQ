@@ -1,46 +1,31 @@
 'use client';
 
-import Link from 'next/link';
+import React from 'react';
 
 export default function NotFound() {
   return (
-    <div className="not-found-container card glass">
-      <div className="glitch-text">404</div>
-      <h2>Asset Not Found</h2>
-      <p>The operational route you are attempting to access does not exist or has been decommissioned.</p>
-      <Link href="/dashboard" className="btn btn-primary">
-        Return to Dashboard
-      </Link>
-
+    <div className="not-found">
+      <div className="not-found-content">
+        <p className="code">404</p>
+        <h1>Page not found</h1>
+        <p className="message">The page you’re looking for doesn’t exist or has been moved.</p>
+        <a href="/dashboard" className="btn btn-primary">Back to Dashboard</a>
+      </div>
       <style jsx>{`
-        .not-found-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          max-width: 500px;
-          margin: 100px auto;
+        .not-found {
+          display: flex; align-items: center; justify-content: center;
+          min-height: 60vh;
+        }
+        .not-found-content {
           text-align: center;
-          padding: 48px;
+          display: flex; flex-direction: column; align-items: center; gap: 16px;
         }
-        
-        .glitch-text {
-          font-size: 5rem;
-          font-weight: 900;
-          color: var(--accent-primary);
-          margin-bottom: 8px;
-          letter-spacing: -4px;
+        .code {
+          font-size: 6rem; font-weight: 900;
+          color: var(--text-muted); line-height: 1;
         }
-        
-        h2 {
-          margin-bottom: 16px;
-          font-weight: 800;
-        }
-        
-        p {
-          color: var(--text-secondary);
-          margin-bottom: 32px;
-        }
+        h1 { font-size: 1.5rem; font-weight: 700; }
+        .message { color: var(--text-secondary); max-width: 36ch; }
       `}</style>
     </div>
   );

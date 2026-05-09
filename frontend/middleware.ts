@@ -1,21 +1,24 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+const PUBLIC_PATHS = ['/login'];
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('vaultiq_token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Root redirect to dashboard
+  // Allow public paths
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // Allow Next.js internals
+  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon')) {
+    return NextResponse.next();
+  }
+
+  // Auth is handled client-side with AuthContext.
+  // This middleware handles the root redirect.
   if (pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Protect all routes except login
-  if (!token && pathname !== '/login') {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Prevent logged in users from seeing login page
-  if (token && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -23,14 +26,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

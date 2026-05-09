@@ -3,34 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  MANAGER
-  USER
-}
-
-enum AssetStatus {
-  AVAILABLE
-  ASSIGNED
-  MAINTENANCE
-  RETIRED
-}
-
-enum MaintenanceStatus {
-  OPEN
-  IN_PROGRESS
-  COMPLETED
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
   id               String            @id @default(uuid())
   email            String            @unique
   fullName         String
-  role             Role              @default(USER)
+  role             String            @default("USER")
   azureId          String            @unique
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -45,7 +26,7 @@ model Asset {
   modelName        String
   typeId           String
   locationId       String
-  status           AssetStatus       @default(AVAILABLE)
+  status           String            @default("AVAILABLE")
   purchasePrice    Float
   purchaseDate     DateTime
   createdAt        DateTime          @default(now())
@@ -75,7 +56,7 @@ model MaintenanceRecord {
   assetId          String
   issueType        String
   description      String
-  status           MaintenanceStatus @default(OPEN)
+  status           String            @default("OPEN")
   scheduledDate    DateTime
   completedAt      DateTime?
   technicianNotes  String?

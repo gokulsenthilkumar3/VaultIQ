@@ -18,7 +18,7 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  await app.listen(3001);
+  await app.listen(4000);
   console.log(`VaultIQ Backend running on: ${await app.getUrl()}`);
 }
 bootstrap();

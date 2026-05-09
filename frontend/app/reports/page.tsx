@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
 import React from 'react';
+import AssetGraph from '../../components/AssetGraph';
 
 export default function ReportsPage() {
   const reportTemplates = [
@@ -30,6 +31,11 @@ export default function ReportsPage() {
           </div>
         ))}
       </div>
+
+      <section className="relationship-graph">
+        <h2 className="section-title-large">Network Topology</h2>
+        <AssetGraph />
+      </section>
 
       <style jsx>{`
         .reports-container {
@@ -90,6 +96,17 @@ export default function ReportsPage() {
           background: transparent;
           border: 1px solid var(--border-color);
           color: var(--text-primary);
+        }
+
+        .section-title-large {
+          font-size: 1.5rem;
+          font-weight: 800;
+          margin-bottom: 24px;
+          color: var(--text-primary);
+        }
+
+        .relationship-graph {
+          margin-top: 40px;
         }
       `}</style>
     </div>

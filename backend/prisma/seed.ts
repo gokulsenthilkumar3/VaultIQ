@@ -1,4 +1,4 @@
-import { PrismaClient, Role, AssetStatus, MaintenanceStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -44,7 +44,7 @@ async function main() {
     create: {
       email: 'admin.test@kangeyan.com',
       fullName: 'Main Administrator',
-      role: Role.ADMIN,
+      role: 'ADMIN',
       azureId: 'test-admin-sso',
     },
   });
@@ -55,7 +55,7 @@ async function main() {
     create: {
       email: 'manager.test@kangeyan.com',
       fullName: 'Regional Manager',
-      role: Role.MANAGER,
+      role: 'MANAGER',
       azureId: 'test-manager-sso',
     },
   });
@@ -66,7 +66,7 @@ async function main() {
     create: {
       email: 'user.test@kangeyan.com',
       fullName: 'General Staff',
-      role: Role.USER,
+      role: 'USER',
       azureId: 'test-user-sso',
     },
   });
@@ -81,7 +81,7 @@ async function main() {
       modelName: 'MacBook Pro M3 Max',
       typeId: laptopType.id,
       locationId: hq.id,
-      status: AssetStatus.AVAILABLE,
+      status: 'AVAILABLE',
       purchasePrice: 3499.00,
       purchaseDate: new Date('2024-01-15'),
     },
@@ -96,7 +96,7 @@ async function main() {
       modelName: 'PowerEdge R750',
       typeId: serverType.id,
       locationId: lab.id,
-      status: AssetStatus.MAINTENANCE,
+      status: 'MAINTENANCE',
       purchasePrice: 12500.00,
       purchaseDate: new Date('2023-06-20'),
     },
@@ -108,7 +108,7 @@ async function main() {
       assetId: dellServer.id,
       issueType: 'High Thermal Throttling',
       description: 'System fan 3 failure causing heat spike in Rack B-04',
-      status: MaintenanceStatus.OPEN,
+      status: 'OPEN',
       scheduledDate: new Date(),
     }
   });

@@ -36,6 +36,8 @@ export default function MaintenancePage() {
     );
   }
 
+  const items = queue as any[];
+
   return (
     <div className="maintenance-container">
       <header>
@@ -58,7 +60,7 @@ export default function MaintenancePage() {
                 </tr>
               </thead>
               <tbody>
-                {queue?.map((item: any) => (
+                {items.map((item: any) => (
                   <tr key={item.id}>
                     <td className="mono">{item.id.substring(0, 8)}</td>
                     <td className="bold">{item.asset.modelName}</td>

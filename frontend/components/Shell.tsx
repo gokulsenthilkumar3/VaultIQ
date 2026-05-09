@@ -3,15 +3,25 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
+import { 
+  LayoutDashboard, 
+  Package, 
+  ScanQrCode, 
+  Wrench, 
+  ClipboardList, 
+  LogOut,
+  Plus,
+  Triangle
+} from 'lucide-react';
 import RoleGuard from './RoleGuard';
 import AddAssetModal from './AddAssetModal';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/inventory', label: 'Inventory', icon: '📦' },
-  { href: '/scanner', label: 'Scanner', icon: '📷' },
-  { href: '/maintenance', label: 'Maintenance', icon: '🔧' },
-  { href: '/reports', label: 'Reports', icon: '📜' },
+  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+  { href: '/inventory', label: 'Inventory', icon: <Package size={18} /> },
+  { href: '/scanner', label: 'Scanner', icon: <ScanQrCode size={18} /> },
+  { href: '/maintenance', label: 'Maintenance', icon: <Wrench size={18} /> },
+  { href: '/reports', label: 'Reports', icon: <ClipboardList size={18} /> },
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {
@@ -48,7 +58,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     <div className="layout-wrapper">
       <aside className="sidebar glass">
         <div className="logo">
-          <span className="logo-icon">▲</span>
+          <span className="logo-icon"><Triangle size={24} fill="currentColor" /></span>
           <span className="logo-text">VaultIQ</span>
         </div>
         <nav className="nav-menu" aria-label="Main navigation">
@@ -73,7 +83,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <button className="btn-logout" onClick={() => logout()} aria-label="Sign out">
-            Sign out
+            <LogOut size={16} /> Sign out
           </button>
         </div>
       </aside>
@@ -88,7 +98,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 onClick={() => setIsAddAssetOpen(true)}
                 aria-label="Add new asset"
               >
-                + Add Asset
+                <Plus size={18} /> Add Asset
               </button>
             </RoleGuard>
           </div>
@@ -108,7 +118,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       )}
 
       <style jsx>{`
-        .nav-icon { font-size: 1rem; }
+        .nav-icon { font-size: 1rem; display: flex; align-items: center; }
+        .logo-icon { color: var(--accent-primary); display: flex; align-items: center; }
+        .btn-primary { display: flex; align-items: center; gap: 8px; }
         .user-profile {
           display: flex; flex-direction: column; gap: 12px;
           margin-top: auto; padding-top: 24px;
@@ -126,6 +138,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           cursor: pointer;
           transition: background 0.2s;
           width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
         .btn-logout:hover { background: rgba(255,77,77,0.2); }
       `}</style>

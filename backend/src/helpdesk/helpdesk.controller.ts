@@ -1,27 +1,43 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('tickets')
 @UseGuards(JwtAuthGuard)
 export class HelpdeskController {
+  constructor(private prisma: PrismaService) {}
 
   @Get()
   async getTickets() {
-    // TODO: Replace with PrismaService query once Ticket model is added to schema
-    return [
-      { id: 'TKT-101', subject: 'MacBook Overheating', priority: 'HIGH', sla_status: 'OVERDUE' },
-      { id: 'TKT-102', subject: 'Monitor Screen Flicker', priority: 'MEDIUM', sla_status: 'HEALTHY' },
-    ];
+    return this.prisma.helpdeskTicket.findMany({
+      include: { user: true, asset: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  @Post()
+  async createTicket(@Body() data: any, @Request() req: any) {
+    return this.prisma.helpdeskTicket.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        priority: data.priority || 'MEDIUM',
+        assetId: data.assetId,
+        userId: req.user.userId,
+      },
+      include: { user: true, asset: true },
+    });
   }
 
   @Post('triage')
   async triageTicket(@Body() data: any) {
-    // TODO: Connect to real LLM triage service
+    // In a full production setup, this would call an LLM (e.g., OpenAI/Gemini)
+    // For now, return a placeholder heuristic response labeled as Demo
     return {
-      suggestedPriority: 'HIGH',
-      suggestedCategory: 'Hardware',
-      confidence: 0.94,
-      aiSummary: 'Based on the description, this appears to be a thermal management issue. Recommend scheduling a hardware inspection.',
+      suggestedPriority: data.description?.toLowerCase().includes('critical') ? 'HIGH' : 'MEDIUM',
+      suggestedCategory: 'Hardware (Demo Triage)',
+      confidence: 0.85,
+      aiSummary: 'Based on the description provided, this ticket requires standard triage. (Demo Mode)',
     };
   }
 }

@@ -7,17 +7,19 @@ import { apiFetch } from '../../lib/api';
 export default function Dashboard() {
   const { data, error, isLoading } = useSWR('/assets/summary', apiFetch);
 
-  if (error) return <div>Failed to load operational data.</div>;
+  if (error || !data) return <div className="error-card glass">Failed to load operational data.</div>;
   if (isLoading) return <div className="loading">Initializing Neural Dashboard...</div>;
 
+  const summary = data as any;
+
   const stats = [
-    { label: 'Total Assets', value: data.stats.total.toLocaleString(), trend: '+0%', status: 'primary' },
-    { label: 'Assigned', value: data.stats.assigned.toLocaleString(), trend: `${Math.round(data.stats.utilization)}%`, status: 'success' },
-    { label: 'In Maintenance', value: data.stats.maintenance.toLocaleString(), trend: '0%', status: 'warning' },
+    { label: 'Total Assets', value: summary.stats.total.toLocaleString(), trend: '+0%', status: 'primary' },
+    { label: 'Assigned', value: summary.stats.assigned.toLocaleString(), trend: `${Math.round(summary.stats.utilization)}%`, status: 'success' },
+    { label: 'In Maintenance', value: summary.stats.maintenance.toLocaleString(), trend: '0%', status: 'warning' },
     { label: 'Monthly Depreciation', value: '$0', trend: '+0%', status: 'danger' },
   ];
 
-  const recentActivities = data.recentActivities;
+  const recentActivities = summary.recentActivities;
 
   return (
     <div className="dashboard-container">
@@ -47,7 +49,7 @@ export default function Dashboard() {
                 <span className="activity-icon">{activity.icon}</span>
                 <div className="activity-details">
                   <p className="activity-text"><strong>{activity.user}</strong> {activity.action}</p>
-                  <p className="activity-time">{activity.time}</p>
+                  <p className="activity-time">{new Date(activity.time).toLocaleString()}</p>
                 </div>
               </div>
             ))}
@@ -57,8 +59,8 @@ export default function Dashboard() {
         <section className="card maintenance-section glass">
           <h3 className="section-title">Maintenance Queue</h3>
           <div className="empty-state">
-            <p>Everything is running smoothly.</p>
-            <button className="btn btn-primary btn-maintenance">View Schedule</button>
+            <p>View predictive diagnostics & triage.</p>
+            <a href="/maintenance" className="btn btn-primary btn-maintenance">View Schedule</a>
           </div>
         </section>
       </div>
@@ -71,7 +73,7 @@ export default function Dashboard() {
         }
 
         .page-title {
-          font-size: 2rem;
+          font-size: var(--text-xl, 2rem);
           font-weight: 800;
           letter-spacing: -0.5px;
           margin-bottom: 8px;
@@ -113,7 +115,7 @@ export default function Dashboard() {
         }
 
         .stat-value {
-          font-size: 2.25rem;
+          font-size: var(--text-2xl, 2.25rem);
           font-weight: 700;
         }
 
@@ -192,6 +194,7 @@ export default function Dashboard() {
 
         .btn-maintenance {
           margin-top: 16px;
+          text-decoration: none;
         }
       `}</style>
     </div>

@@ -60,7 +60,7 @@ export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutMod
               className="glass"
             >
               <option value="">Choose an employee...</option>
-              {users?.map((user: any) => (
+              {Array.isArray(users) && users.map((user: any) => (
                 <option key={user.id} value={user.id}>{user.fullName} ({user.email})</option>
               ))}
             </select>

@@ -13,9 +13,9 @@ export default function MaintenancePage() {
         <header>
           <h1 className="page-title">Predictive Maintenance</h1>
         </header>
-        <div className="card glass" style={{ padding: '40px', textAlign: 'center' }}>
-          <h3 style={{ color: 'var(--accent-danger)' }}>Connection Error</h3>
-          <p style={{ color: 'var(--text-secondary)' }}>Failed to load the triage queue. Please ensure backend services are responsive.</p>
+        <div className="card glass error-card">
+          <h3 className="error-title">Connection Error</h3>
+          <p className="error-desc">Failed to load the triage queue. Please ensure backend services are responsive.</p>
         </div>
       </div>
     );
@@ -29,8 +29,8 @@ export default function MaintenancePage() {
           <p className="page-subtitle skeleton-text">Initializing Diagnostics...</p>
         </header>
         <div className="maintenance-grid">
-          <section className="card glass queue-section skeleton-box" style={{ height: '300px' }}></section>
-          <section className="card glass health-insights skeleton-box" style={{ height: '300px' }}></section>
+          <section className="card glass queue-section skeleton-box skeleton-section"></section>
+          <section className="card glass health-insights skeleton-box skeleton-section"></section>
         </div>
       </div>
     );
@@ -100,6 +100,11 @@ export default function MaintenancePage() {
           grid-template-columns: 2fr 1fr;
           gap: 24px;
         }
+
+        .error-card { padding: 40px; text-align: center; }
+        .error-title { color: var(--accent-danger); }
+        .error-desc { color: var(--text-secondary); }
+        .skeleton-section { height: 300px; }
 
         .section-title {
           margin-bottom: 24px;

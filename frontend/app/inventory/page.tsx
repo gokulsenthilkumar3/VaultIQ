@@ -7,30 +7,35 @@ import DigitalTwin from '../../components/DigitalTwin';
 import BlockchainBadge from '../../components/BlockchainBadge';
 import CheckoutModal from '../../components/CheckoutModal';
 
+import { Plus, ChevronRight, Search, Eye, MoveRight } from 'lucide-react';
+
 export default function InventoryPage() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const { data: assets, error, isLoading, mutate } = useSWR('/assets', apiFetch);
 
-  if (error) return <div>Failed to load registry.</div>;
+  if (error || !assets) return <div className="error-card glass">Failed to load registry.</div>;
   if (isLoading) return <div className="loading">Syncing Digital Twin Registry...</div>;
+
+  const data = assets as any[];
 
   return (
     <div className="inventory-container">
       <header className="inventory-header">
         <div>
           <h1 className="page-title">Digital Twin Registry</h1>
-          <p className="page-subtitle">Real-time synchronization across {assets?.length || 0} enterprise assets.</p>
+          <p className="page-subtitle">Real-time synchronization across {data.length} enterprise assets.</p>
         </div>
         <div className="filter-group">
           <div className="search-bar glass">
+            <Search size={16} className="search-icon" />
             <input type="text" placeholder="Search assets..." />
           </div>
-          <button className="btn btn-primary">+ Register Asset</button>
+          <button className="btn btn-primary"><Plus size={18} /> Register Asset</button>
         </div>
       </header>
 
       <div className="asset-grid">
-        {assets?.map((asset: any) => (
+        {data.map((asset: any) => (
           <div key={asset.id} className="asset-card card animate-fade-in">
             <div className="twin-preview">
               <DigitalTwin 
@@ -63,13 +68,13 @@ export default function InventoryPage() {
               </div>
 
               <div className="asset-actions">
-                <a href={`/inventory/${asset.id}`} className="btn btn-outline">Vitals</a>
+                <a href={`/inventory/${asset.id}`} className="btn btn-outline"><Eye size={16} /> Vitals</a>
                 <button 
                   className="btn btn-primary" 
                   onClick={() => setSelectedAsset(asset)}
                   disabled={asset.status !== 'AVAILABLE'}
                 >
-                  Deployment
+                  <MoveRight size={16} /> Deployment
                 </button>
               </div>
             </div>
@@ -96,9 +101,16 @@ export default function InventoryPage() {
         }
 
         .search-bar {
+          display: flex;
+          align-items: center;
+          gap: 12px;
           padding: 8px 16px;
           border-radius: 8px;
           border: 1px solid var(--border-color);
+        }
+
+        .search-icon {
+          color: var(--text-secondary);
         }
 
         .search-bar input {
@@ -215,6 +227,13 @@ export default function InventoryPage() {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 12px;
+        }
+
+        .btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
 
         .btn-outline {

@@ -16,9 +16,10 @@ export class AssetService {
     });
   }
 
-  async findOne(id: string) {
-    const asset = await this.prisma.asset.findUnique({
-      where: { id },
+  async findOne(idOrTag: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrTag);
+    const asset = await this.prisma.asset.findFirst({
+      where: isUuid ? { id: idOrTag } : { tagId: idOrTag },
       include: {
         type: true,
         location: true,

@@ -56,7 +56,7 @@ export default function AIAssistant() {
         <div className="ai-brand">
           <div className="ai-orb"></div>
           <div>
-            <h3>VaultIQ-Core</h3>
+            <h3>VaultIQ-Core (Demo Mode)</h3>
             <span className="ai-status">Neural Network Active</span>
           </div>
         </div>

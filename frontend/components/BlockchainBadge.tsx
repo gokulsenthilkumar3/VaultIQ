@@ -22,7 +22,7 @@ export default function BlockchainBadge({ assetId }: BlockchainBadgeProps) {
   };
 
   return (
-    <div className="blockchain-badge">
+    <div className="blockchain-badge" title="Asset events are secured via SHA-256 cryptographic hashing to ensure an immutable audit trail.">
       {status === 'IDLE' && (
         <button className="btn-verify" onClick={verifyIntegrity}>
           <span className="icon">🔗</span> Verify Integrity

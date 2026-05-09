@@ -1,23 +1,25 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React, { useState } from 'react';
+import useSWR from 'swr';
+import { apiFetch } from '../../lib/api';
 import DigitalTwin from '../../components/DigitalTwin';
 import BlockchainBadge from '../../components/BlockchainBadge';
-
-const sampleAssets = [
-  { id: '1', name: 'Primary Web Server', tagId: 'SRV-001', type: 'SERVER', status: 'HEALTHY', location: 'Rack A-12' },
-  { id: '2', name: 'Design Workstation', tagId: 'LAP-442', type: 'LAPTOP', status: 'WARNING', location: 'Studio 4' },
-  { id: '3', name: 'Main Console', tagId: 'MON-901', type: 'MONITOR', status: 'CRITICAL', location: 'Reception' },
-  { id: '4', name: 'Backup Cluster', tagId: 'SRV-002', type: 'SERVER', status: 'HEALTHY', location: 'Rack B-04' },
-];
+import CheckoutModal from '../../components/CheckoutModal';
 
 export default function InventoryPage() {
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const { data: assets, error, isLoading, mutate } = useSWR('/assets', apiFetch);
+
+  if (error) return <div>Failed to load registry.</div>;
+  if (isLoading) return <div className="loading">Syncing Digital Twin Registry...</div>;
+
   return (
     <div className="inventory-container">
       <header className="inventory-header">
         <div>
           <h1 className="page-title">Digital Twin Registry</h1>
-          <p className="page-subtitle">Real-time synchronization across {sampleAssets.length} enterprise assets.</p>
+          <p className="page-subtitle">Real-time synchronization across {assets?.length || 0} enterprise assets.</p>
         </div>
         <div className="filter-group">
           <div className="search-bar glass">
@@ -28,19 +30,19 @@ export default function InventoryPage() {
       </header>
 
       <div className="asset-grid">
-        {sampleAssets.map((asset) => (
+        {assets?.map((asset: any) => (
           <div key={asset.id} className="asset-card card animate-fade-in">
             <div className="twin-preview">
               <DigitalTwin 
-                type={asset.type as any} 
-                status={asset.status as any} 
+                type={asset.type.name.toUpperCase() as any} 
+                status={asset.status === 'AVAILABLE' ? 'HEALTHY' : asset.status === 'MAINTENANCE' ? 'CRITICAL' : 'WARNING'} 
               />
             </div>
             
             <div className="asset-info">
               <div className="asset-main">
                 <div>
-                  <h3 className="asset-name">{asset.name}</h3>
+                  <h3 className="asset-name">{asset.modelName}</h3>
                   <span className="asset-tag">{asset.tagId}</span>
                 </div>
                 <BlockchainBadge assetId={asset.id} />
@@ -49,20 +51,26 @@ export default function InventoryPage() {
               <div className="asset-meta-grid">
                 <div className="meta-item">
                   <span className="meta-label">Location</span>
-                  <span className="meta-value">{asset.location}</span>
+                  <span className="meta-value">{asset.location.name}</span>
                 </div>
                 <div className="meta-item">
                   <span className="meta-label">Condition</span>
                   <div className="status-indicator">
                     <span className={`status-dot ${asset.status.toLowerCase()}`}></span>
-                    <span className="status-text">{asset.status}</span>
+                    <span className="status-text">{asset.status.replace('_', ' ')}</span>
                   </div>
                 </div>
               </div>
 
               <div className="asset-actions">
-                <button className="btn btn-outline">Vitals</button>
-                <button className="btn btn-primary">Deployment</button>
+                <a href={`/inventory/${asset.id}`} className="btn btn-outline">Vitals</a>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => setSelectedAsset(asset)}
+                  disabled={asset.status !== 'AVAILABLE'}
+                >
+                  Deployment
+                </button>
               </div>
             </div>
           </div>
@@ -220,6 +228,17 @@ export default function InventoryPage() {
           border-color: white;
         }
       `}</style>
+
+      {selectedAsset && (
+        <CheckoutModal 
+          asset={selectedAsset} 
+          onClose={() => setSelectedAsset(null)}
+          onSuccess={() => {
+            mutate();
+            setSelectedAsset(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -10,11 +10,7 @@ export class AuthService {
   ) {}
 
   async validateUser(azureId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { azureId },
-    });
-    if (!user) return null;
-    return user;
+    return this.prisma.user.findUnique({ where: { azureId } });
   }
 
   async login(user: any) {
@@ -30,22 +26,21 @@ export class AuthService {
     };
   }
 
-  // Mock Azure AD validation (for development)
   async devLogin(email: string) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new UnauthorizedException('Dev login is disabled in production');
+    }
     let user = await this.prisma.user.findUnique({ where: { email } });
-    
     if (!user) {
-      // Auto-create user for dev purposes if they don't exist
       user = await this.prisma.user.create({
         data: {
           email,
-          fullName: email.split('@')[0],
-          azureId: `dev-${Math.random().toString(36).substr(2, 9)}`,
-          role: email.includes('admin') ? 'ADMIN' : 'USER',
+          fullName: email.split('@')[0].replace(/[._-]/g, ' '),
+          azureId: `dev-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          role: email.toLowerCase().includes('admin') ? 'ADMIN' : email.toLowerCase().includes('manager') ? 'MANAGER' : 'USER',
         },
       });
     }
-
     return this.login(user);
   }
 }

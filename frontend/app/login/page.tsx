@@ -1,140 +1,148 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    if (!email.trim()) return;
+    setError(null);
+    setLoading(true);
     try {
-      await login(email);
+      await login(email.trim());
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Login failed. Please check your email and try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-page">
-      <div className="login-card card glass animate-fade-in">
-        <div className="login-header">
+      <div className="login-card glass animate-slide-up">
+        <div className="login-logo">
           <span className="logo-icon">▲</span>
-          <h1>VaultIQ</h1>
-          <p>Enterprise Asset Hub</p>
+          <span>VaultIQ</span>
         </div>
+        <h1>Sign in</h1>
+        <p className="login-subtitle">Enter your corporate email to access the asset management platform.</p>
+
+        {error && (
+          <div className="error-banner" role="alert">
+            <span>⚠️</span> {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="email">Work Email</label>
-            <input 
+            <label htmlFor="email">Email address</label>
+            <input
               id="email"
-              type="email" 
-              placeholder="name@company.com" 
+              type="email"
+              required
+              autoFocus
+              placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              className="glass"
+              aria-label="Corporate email address"
             />
           </div>
-
-          {error && <p className="error-message">{error}</p>}
-
-          <button type="submit" className="btn btn-primary login-btn" disabled={isLoading}>
-            {isLoading ? 'Authenticating...' : 'Sign in with SSO'}
+          <button type="submit" className="btn btn-primary login-btn" disabled={loading}>
+            {loading ? 'Signing in…' : 'Continue with Email'}
           </button>
         </form>
 
-        <p className="login-footer">
-          Powered by VaultIQ Core. Secure, SHA-256 anchored sessions.
+        <p className="dev-hint">
+          Dev hint: use <code>admin@company.com</code> for ADMIN role
         </p>
       </div>
 
       <style jsx>{`
         .login-page {
-          height: 100vh;
-          width: 100vw;
+          min-height: 100vh;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: radial-gradient(circle at center, #161b22 0%, #0a0c10 100%);
+          background: var(--bg-primary);
         }
-
         .login-card {
-          width: 400px;
+          width: 420px;
           padding: 48px;
           display: flex;
           flex-direction: column;
-          gap: 32px;
-          text-align: center;
+          gap: 20px;
         }
-
-        .login-header h1 {
-          font-size: 2rem;
-          font-weight: 900;
-          margin: 8px 0;
-        }
-
-        .login-header p {
-          color: var(--text-secondary);
-          font-size: 0.9rem;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-        }
-
-        .logo-icon {
-          font-size: 2.5rem;
-          color: var(--accent-primary);
-        }
-
-        form {
+        .login-logo {
           display: flex;
-          flex-direction: column;
-          gap: 24px;
-          text-align: left;
+          align-items: center;
+          gap: 10px;
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: var(--accent-primary);
+          margin-bottom: 8px;
         }
-
+        .logo-icon { font-size: 1.6rem; }
+        h1 { font-size: 1.8rem; font-weight: 800; }
+        .login-subtitle { color: var(--text-secondary); font-size: 0.9rem; }
         .input-group {
           display: flex;
           flex-direction: column;
           gap: 8px;
+          margin-bottom: 8px;
         }
-
         .input-group label {
           font-size: 0.8rem;
-          font-weight: 600;
+          font-weight: 700;
           color: var(--text-secondary);
         }
-
         .input-group input {
-          padding: 12px 16px;
+          background: rgba(255,255,255,0.05);
           border: 1px solid var(--border-color);
-          color: white;
           border-radius: 8px;
+          padding: 12px 16px;
+          color: var(--text-primary);
+          font-size: 1rem;
           outline: none;
+          transition: border-color 0.2s;
         }
-
-        .error-message {
-          color: var(--accent-danger);
-          font-size: 0.85rem;
-          text-align: center;
+        .input-group input:focus {
+          border-color: var(--accent-primary);
+          box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
         }
-
         .login-btn {
           width: 100%;
           padding: 14px;
+          font-size: 1rem;
+          margin-top: 8px;
         }
-
-        .login-footer {
-          font-size: 0.7rem;
+        .error-banner {
+          background: rgba(218, 54, 51, 0.12);
+          border: 1px solid rgba(218, 54, 51, 0.3);
+          border-radius: 8px;
+          padding: 12px 16px;
+          color: #ff7b78;
+          font-size: 0.875rem;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .dev-hint {
+          font-size: 0.75rem;
           color: var(--text-muted);
+          text-align: center;
+          margin-top: 8px;
+        }
+        .dev-hint code {
+          color: var(--accent-primary);
+          background: rgba(88, 166, 255, 0.08);
+          padding: 2px 6px;
+          border-radius: 4px;
         }
       `}</style>
     </div>

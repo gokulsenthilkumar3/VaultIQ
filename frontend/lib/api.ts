@@ -1,25 +1,46 @@
-import Cookies from 'js-cookie';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export async function apiFetch<T = any>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const url = `${API_BASE}${path}`;
 
-export async function apiFetch(endpoint: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? Cookies.get('vaultiq_token') : null;
-  
-  const headers = {
+  // Attach Authorization header from session token if available
+  const token = typeof window !== 'undefined' ? (window as any).__vaultiq_token : undefined;
+  const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((options.headers as object) || {}),
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const res = await fetch(url, { ...options, headers });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'An unexpected error occurred' }));
-    throw new Error(error.message || 'API request failed');
+  if (!res.ok) {
+    let errMsg = `API Error ${res.status}: ${res.statusText}`;
+    try {
+      const body = await res.json();
+      errMsg = body?.message || errMsg;
+    } catch (_) {}
+    const err = new Error(errMsg) as any;
+    err.status = res.status;
+    throw err;
   }
 
-  return response.json();
+  // 204 No Content
+  if (res.status === 204) return undefined as T;
+
+  return res.json() as Promise<T>;
+}
+
+export function setAuthToken(token: string) {
+  if (typeof window !== 'undefined') {
+    (window as any).__vaultiq_token = token;
+  }
+}
+
+export function clearAuthToken() {
+  if (typeof window !== 'undefined') {
+    delete (window as any).__vaultiq_token;
+  }
 }

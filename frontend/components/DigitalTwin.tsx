@@ -9,9 +9,8 @@ interface DigitalTwinProps {
 }
 
 /**
- * VaultIQ Digital Twin Engine
- * Renders a 3D interactive representation of a physical asset.
- * Powered by Three.js.
+ * VaultIQ Digital Twin Engine (V2)
+ * Renders a high-fidelity 3D representation with tech-grid and pulse effects.
  */
 export default function DigitalTwin({ status, type }: DigitalTwinProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -29,87 +28,129 @@ export default function DigitalTwin({ status, type }: DigitalTwinProps) {
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    // 2. Add Asset Geometry (Stylized)
+    // 2. Add Tech Grid
+    const gridHelper = new THREE.GridHelper(10, 20, 0x58a6ff, 0x1a1a1a);
+    gridHelper.position.y = -1.2;
+    gridHelper.material.transparent = true;
+    gridHelper.material.opacity = 0.2;
+    scene.add(gridHelper);
+
+    // 3. Add Asset Geometry
     let geometry;
     if (type === 'SERVER') {
-      geometry = new THREE.BoxGeometry(1, 1.5, 0.8);
+      geometry = new THREE.BoxGeometry(1, 1.8, 0.8);
     } else if (type === 'LAPTOP') {
-      geometry = new THREE.BoxGeometry(1.4, 0.1, 1);
+      geometry = new THREE.BoxGeometry(1.6, 0.08, 1.1);
     } else {
-      geometry = new THREE.BoxGeometry(1.2, 0.8, 0.1);
+      geometry = new THREE.BoxGeometry(1.4, 0.9, 0.1);
     }
 
-    // Status-based Material
     const statusColors = {
       HEALTHY: 0x58a6ff,
       WARNING: 0xd29922,
       CRITICAL: 0xda3633,
     };
 
-    const material = new THREE.MeshStandardMaterial({ 
+    const material = new THREE.MeshPhysicalMaterial({ 
       color: statusColors[status],
-      metalness: 0.7,
-      roughness: 0.2,
+      metalness: 0.9,
+      roughness: 0.1,
       emissive: statusColors[status],
-      emissiveIntensity: 0.5
+      emissiveIntensity: 0.4,
+      transmission: 0.5,
+      thickness: 0.5,
     });
 
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    // 3. Add Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // Add Wireframe Overlay for "Scanning" look
+    const wireframeGeom = new THREE.EdgesGeometry(geometry);
+    const wireframeMat = new THREE.LineBasicMaterial({ 
+      color: statusColors[status], 
+      transparent: true, 
+      opacity: 0.5 
+    });
+    const wireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
+    mesh.add(wireframe);
+
+    // 4. Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
     
-    const pointLight = new THREE.PointLight(0xffffff, 1);
-    pointLight.position.set(5, 5, 5);
-    scene.add(pointLight);
+    const mainLight = new THREE.PointLight(0xffffff, 1.5);
+    mainLight.position.set(5, 5, 5);
+    scene.add(mainLight);
 
-    camera.position.z = 3;
+    const secondaryLight = new THREE.PointLight(statusColors[status], 2);
+    secondaryLight.position.set(-5, -2, 2);
+    scene.add(secondaryLight);
 
-    // 4. Animation Loop
+    camera.position.set(2, 1.5, 3);
+    camera.lookAt(0, 0, 0);
+
+    // 5. Animation Loop
     const animate = () => {
-      requestAnimationFrame(animate);
-      mesh.rotation.y += 0.01;
-      mesh.rotation.x += 0.005;
+      const frameId = requestAnimationFrame(animate);
       
-      // Pulse effect for Critical/Warning
-      if (status !== 'HEALTHY') {
-        material.emissiveIntensity = 0.5 + Math.sin(Date.now() * 0.005) * 0.3;
-      }
+      mesh.rotation.y += 0.008;
+      
+      // Floating animation
+      mesh.position.y = Math.sin(Date.now() * 0.002) * 0.1;
+      
+      // Status Pulse
+      const pulseSpeed = status === 'HEALTHY' ? 0.002 : 0.008;
+      material.emissiveIntensity = 0.3 + Math.sin(Date.now() * pulseSpeed) * 0.3;
+      wireframeMat.opacity = 0.2 + Math.sin(Date.now() * pulseSpeed) * 0.4;
       
       renderer.render(scene, camera);
+      return frameId;
     };
 
-    animate();
+    const frameId = animate();
+
+    // Resize Handler
+    const handleResize = () => {
+      if (!mountRef.current) return;
+      const w = mountRef.current.clientWidth;
+      const h = mountRef.current.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', handleResize);
 
     // Cleanup
     return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(frameId);
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
       }
       geometry.dispose();
       material.dispose();
+      wireframeGeom.dispose();
+      wireframeMat.dispose();
     };
   }, [status, type]);
 
   return (
-    <div className="digital-twin-container glass">
+    <div className="digital-twin-container">
       <div ref={mountRef} className="canvas-mount" />
       <div className="twin-overlay">
-        <span className="status-badge" data-status={status}>
-          {status}
-        </span>
-        <p className="twin-label">Live IoT Sync: Active</p>
+        <div className="status-indicator">
+          <span className="pulse-dot" data-status={status}></span>
+          <span className="status-text">{status}</span>
+        </div>
       </div>
 
       <style jsx>{`
         .digital-twin-container {
           position: relative;
           width: 100%;
-          height: 300px;
+          height: 100%;
           overflow: hidden;
-          background: radial-gradient(circle at center, rgba(88, 166, 255, 0.1), transparent);
+          background: radial-gradient(circle at 50% 50%, rgba(88, 166, 255, 0.05) 0%, transparent 80%);
         }
         .canvas-mount {
           width: 100%;
@@ -117,27 +158,34 @@ export default function DigitalTwin({ status, type }: DigitalTwinProps) {
         }
         .twin-overlay {
           position: absolute;
-          top: 16px;
-          left: 16px;
+          top: 12px;
+          left: 12px;
           pointer-events: none;
         }
-        .status-badge {
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          background: rgba(0,0,0,0.5);
-          border: 1px solid rgba(255,255,255,0.1);
+        .status-indicator {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(0, 0, 0, 0.6);
+          padding: 4px 10px;
+          border-radius: 4px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(4px);
         }
-        .status-badge[data-status="HEALTHY"] { color: var(--accent-primary); border-color: var(--accent-primary); }
-        .status-badge[data-status="WARNING"] { color: var(--accent-warning); border-color: var(--accent-warning); }
-        .status-badge[data-status="CRITICAL"] { color: var(--accent-danger); border-color: var(--accent-danger); }
+        .pulse-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+        }
+        .pulse-dot[data-status="HEALTHY"] { background: #58a6ff; box-shadow: 0 0 10px #58a6ff; }
+        .pulse-dot[data-status="WARNING"] { background: #d29922; box-shadow: 0 0 10px #d29922; }
+        .pulse-dot[data-status="CRITICAL"] { background: #da3633; box-shadow: 0 0 10px #da3633; }
         
-        .twin-label {
-          font-size: 0.7rem;
-          color: var(--text-secondary);
-          margin-top: 8px;
+        .status-text {
+          font-size: 0.65rem;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          color: white;
         }
       `}</style>
     </div>

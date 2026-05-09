@@ -1,25 +1,27 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('tickets')
+@UseGuards(JwtAuthGuard)
 export class HelpdeskController {
-  
+
   @Get()
   async getTickets() {
-    // Returns ticket queue with SLA status
+    // TODO: Replace with PrismaService query once Ticket model is added to schema
     return [
       { id: 'TKT-101', subject: 'MacBook Overheating', priority: 'HIGH', sla_status: 'OVERDUE' },
-      { id: 'TKT-102', subject: 'Monitor Screen Flicker', priority: 'MEDIUM', sla_status: 'HEALTHY' }
+      { id: 'TKT-102', subject: 'Monitor Screen Flicker', priority: 'MEDIUM', sla_status: 'HEALTHY' },
     ];
   }
 
   @Post('triage')
   async triageTicket(@Body() data: any) {
-    // LLM-powered triage logic
+    // TODO: Connect to real LLM triage service
     return {
       suggestedPriority: 'HIGH',
       suggestedCategory: 'Hardware',
       confidence: 0.94,
-      aiSummary: 'User reports thermal throttling on M2 Pro MacBook. Likely battery swelling or fan failure.'
+      aiSummary: 'Based on the description, this appears to be a thermal management issue. Recommend scheduling a hardware inspection.',
     };
   }
 }

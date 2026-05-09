@@ -1,19 +1,23 @@
 "use client";
+
 import React from 'react';
+import useSWR from 'swr';
+import { apiFetch } from '../../lib/api';
 
 export default function Dashboard() {
+  const { data, error, isLoading } = useSWR('/assets/summary', apiFetch);
+
+  if (error) return <div>Failed to load operational data.</div>;
+  if (isLoading) return <div className="loading">Initializing Neural Dashboard...</div>;
+
   const stats = [
-    { label: 'Total Assets', value: '1,248', trend: '+12%', status: 'primary' },
-    { label: 'Assigned', value: '842', trend: '67%', status: 'success' },
-    { label: 'In Maintenance', value: '24', trend: '-2%', status: 'warning' },
-    { label: 'Monthly Depreciation', value: '$4,120', trend: '+5%', status: 'danger' },
+    { label: 'Total Assets', value: data.stats.total.toLocaleString(), trend: '+0%', status: 'primary' },
+    { label: 'Assigned', value: data.stats.assigned.toLocaleString(), trend: `${Math.round(data.stats.utilization)}%`, status: 'success' },
+    { label: 'In Maintenance', value: data.stats.maintenance.toLocaleString(), trend: '0%', status: 'warning' },
+    { label: 'Monthly Depreciation', value: '$0', trend: '+0%', status: 'danger' },
   ];
 
-  const recentActivities = [
-    { user: 'Sarah Chen', action: 'Checked out MacBook Pro M3', time: '12 mins ago', icon: '💻' },
-    { user: 'Mike Ross', action: 'Reported Monitor Issue', time: '45 mins ago', icon: '⚠️' },
-    { user: 'Admin', action: 'Added 50x Herman Miller Chairs', time: '2 hours ago', icon: '🪑' },
-  ];
+  const recentActivities = data.recentActivities;
 
   return (
     <div className="dashboard-container">
@@ -38,7 +42,7 @@ export default function Dashboard() {
         <section className="card activity-section glass">
           <h3 className="section-title">Recent Activity</h3>
           <div className="activity-list">
-            {recentActivities.map((activity, i) => (
+            {recentActivities.map((activity: any, i: number) => (
               <div key={i} className="activity-item">
                 <span className="activity-icon">{activity.icon}</span>
                 <div className="activity-details">

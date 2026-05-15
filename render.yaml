@@ -6,7 +6,7 @@ services:
     region: singapore
     plan: free
     buildCommand: cd backend && npm install --include=dev && npx prisma generate && npm run build
-    startCommand: node backend/dist/main
+    startCommand: cd backend && node dist/main
     healthCheckPath: /
     envVars:
       - key: NODE_ENV

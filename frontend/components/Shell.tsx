@@ -1,7 +1,6 @@
 'use client';
-
 import React from 'react';
-import { mutate } from 'swr';
+import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -11,11 +10,8 @@ import {
   Wrench,
   ClipboardList,
   LogOut,
-  Plus,
-  Triangle
+  Triangle,
 } from 'lucide-react';
-import RoleGuard from './RoleGuard';
-import AddAssetModal from './AddAssetModal';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
@@ -27,12 +23,10 @@ const NAV_ITEMS = [
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
-  const [isAddAssetOpen, setIsAddAssetOpen] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  // Normalize path by stripping trailing slash for comparisons
-  const normalizedPath = pathname.replace(/\/$/, '') || '/';
+  const normalizedPath = '/' + (pathname.replace(/^\//, '').split('/')[0] || '');
 
   React.useEffect(() => {
     if (!loading && !user && normalizedPath !== '/login') {
@@ -44,10 +38,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <>
+      <div className="shell-loader">
+        <div className="spinner" />
         <style>{`.shell-loader{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-primary)}.spinner{width:40px;height:40px;border:3px solid var(--border-color);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-        <div className="shell-loader"><div className="spinner" /></div>
-      </>
+      </div>
     );
   }
 
@@ -60,25 +54,29 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="app-layout">
+      <div className="layout-wrapper">
         <nav className="sidebar">
           <div className="logo">
-            <span className="logo-icon"><Triangle size={22} fill="currentColor" /></span>
+            <Triangle size={22} fill="currentColor" />
             <span>VaultIQ</span>
           </div>
-          <ul className="nav-list">
+
+          <ul className="nav-menu">
             {NAV_ITEMS.map((item) => (
               <li key={item.href}>
-                <a
+                <Link
                   href={item.href}
-                  className={`nav-item ${normalizedPath === item.href ? 'active' : ''}`}
+                  className={`nav-item ${
+                    normalizedPath === item.href ? 'active' : ''
+                  }`}
                 >
                   <span className="nav-icon">{item.icon}</span>
                   <span>{item.label}</span>
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
+
           <div className="user-profile">
             <div className="user-profile-main">
               <div className="avatar">{initials}</div>
@@ -92,37 +90,21 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </nav>
+
         <main className="main-content">
-          <RoleGuard roles={['ADMIN', 'MANAGER']}>
-            <button
-              className="btn btn-primary fab-add"
-              onClick={() => setIsAddAssetOpen(true)}
-              aria-label="Add new asset"
-            >
-              <Plus size={16} /> Add Asset
-            </button>
-          </RoleGuard>
           {children}
         </main>
       </div>
-      {isAddAssetOpen && (
-        <AddAssetModal
-          onClose={() => setIsAddAssetOpen(false)}
-          onSuccess={() => {
-            setIsAddAssetOpen(false);
-            mutate('/assets');
-            mutate('/assets/summary');
-          }}
-        />
-      )}
+
       <style>{`
-        .nav-icon { font-size: 1rem; display: flex; align-items: center; }
-        .logo-icon { color: var(--accent-primary); display: flex; align-items: center; }
-        .btn-primary { display: flex; align-items: center; gap: 8px; }
-        .user-profile { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 24px; border-top: 1px solid var(--border-color); }
-        .user-profile-main { display: flex; align-items: center; gap: 12px; }
-        .btn-logout { background: rgba(255,77,77,0.1); color: #ff7b78; border: 1px solid rgba(255,77,77,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-logout:hover { background: rgba(255,77,77,0.2); }
+        ul.nav-menu { list-style: none; padding: 0; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 8px; text-decoration: none; color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; transition: all 0.2s ease; }
+        .nav-item:hover { background: rgba(88,166,255,0.08); color: var(--text-primary); }
+        .nav-item.active { background: rgba(88,166,255,0.12); color: var(--accent-primary); font-weight: 600; }
+        .nav-icon { display: flex; align-items: center; flex-shrink: 0; }
+        .btn-logout { background: rgba(255,77,77,0.08); color: #ff7b78; border: 1px solid rgba(255,77,77,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+        .btn-logout:hover { background: rgba(255,77,77,0.15); }
+        .user-profile-main { display: flex; align-items: center; gap: 10px; }
       `}</style>
     </>
   );

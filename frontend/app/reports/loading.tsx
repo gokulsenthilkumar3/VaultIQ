@@ -1,3 +1,4 @@
+"use client";
 export default function ReportsLoading() {
   return (
     <div className="reports-container">

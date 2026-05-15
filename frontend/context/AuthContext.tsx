@@ -1,5 +1,4 @@
 'use client';
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { setAuthToken, clearAuthToken } from '../lib/api';
@@ -18,13 +17,13 @@ interface AuthContextType {
   logout: () => void;
 }
 
-// Mock users — works when backend is unreachable
-// To use real backend: replace login() body with the apiFetch call
 const MOCK_USERS: Record<string, User> = {
   'admin@company.com': { id: 'mock-1', email: 'admin@company.com', fullName: 'Admin User', role: 'ADMIN' },
   'manager@company.com': { id: 'mock-2', email: 'manager@company.com', fullName: 'Manager User', role: 'MANAGER' },
   'user@company.com': { id: 'mock-3', email: 'user@company.com', fullName: 'Regular User', role: 'USER' },
 };
+
+const STORAGE_KEY = 'vaultiq_user';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
@@ -39,10 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const storedUser = (window as any).__vaultiq_user;
-    if (storedUser) {
-      setUser(storedUser);
-    }
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch {}
     setLoading(false);
   }, []);
 
@@ -53,14 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const mockToken = 'mock-token-' + Date.now();
     setAuthToken(mockToken);
-    (window as any).__vaultiq_user = mockUser;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
     setUser(mockUser);
     router.push('/dashboard');
   };
 
   const logout = () => {
     clearAuthToken();
-    delete (window as any).__vaultiq_user;
+    localStorage.removeItem(STORAGE_KEY);
     setUser(null);
     router.push('/login');
   };

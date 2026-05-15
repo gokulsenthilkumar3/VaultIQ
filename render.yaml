@@ -1,9 +1,9 @@
 services:
-  # ── NestJS Backend ─────────────────────────────────────────────────────────
+  # ── NestJS Backend ────────────────────────────────────────────────────
   - type: web
     name: vaultiq-backend
     runtime: node
-    region: singapore   # closest to India
+    region: singapore
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npx nest build
     startCommand: node dist/main
@@ -14,18 +14,18 @@ services:
       - key: PORT
         value: 3001
       - key: DATABASE_URL
-        sync: false          # set manually in Render dashboard
+        sync: false
       - key: REDIS_URL
         fromService:
           type: redis
           name: vaultiq-redis
           property: connectionString
       - key: JWT_SECRET
-        generateValue: true  # Render auto-generates a secure secret
+        generateValue: true
       - key: FRONTEND_URL
-        sync: false          # set to your Vercel URL after deploying frontend
+        sync: false
 
-  # ── Next.js Frontend ────────────────────────────────────────────────────────
+  # ── Next.js Frontend ────────────────────────────────────────────────
   - type: web
     name: vaultiq-frontend
     runtime: node
@@ -41,11 +41,11 @@ services:
           type: web
           name: vaultiq-backend
           property: host
-          envVarKey: NEXT_PUBLIC_API_URL
 
-  # ── Redis Cache ─────────────────────────────────────────────────────────────
+  # ── Redis Cache ─────────────────────────────────────────────────────
   - type: redis
     name: vaultiq-redis
     region: singapore
     plan: free
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []

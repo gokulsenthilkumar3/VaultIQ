@@ -3,6 +3,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 export async function apiFetch<T = any>(
   path: string,
   options: RequestInit = {},
+  timeoutMs = 5000,
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
 
@@ -14,23 +15,34 @@ export async function apiFetch<T = any>(
     ...((options.headers as object) || {}),
   };
 
-  const res = await fetch(url, { ...options, headers });
+  // Abort after timeoutMs to prevent hanging forever
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!res.ok) {
-    let errMsg = `API Error ${res.status}: ${res.statusText}`;
-    try {
-      const body = await res.json();
-      errMsg = body?.message || errMsg;
-    } catch (_) {}
-    const err = new Error(errMsg) as any;
-    err.status = res.status;
+  try {
+    const res = await fetch(url, { ...options, headers, signal: controller.signal });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      let errMsg = `API Error ${res.status}: ${res.statusText}`;
+      try {
+        const body = await res.json();
+        errMsg = body?.message || errMsg;
+      } catch (_) {}
+      const err = new Error(errMsg) as any;
+      err.status = res.status;
+      throw err;
+    }
+
+    // 204 No Content
+    if (res.status === 204) return undefined as T;
+
+    return res.json() as Promise<T>;
+  } catch (err: any) {
+    clearTimeout(timer);
+    // Re-throw so callers can handle (mock fallback in AuthContext)
     throw err;
   }
-
-  // 204 No Content
-  if (res.status === 204) return undefined as T;
-
-  return res.json() as Promise<T>;
 }
 
 export function setAuthToken(token: string) {

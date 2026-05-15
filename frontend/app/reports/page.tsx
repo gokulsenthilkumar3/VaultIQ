@@ -1,130 +1,163 @@
-"use client";
+'use client';
+import React, { useState } from 'react';
+import { getAssets, getTickets, getDashboardSummary } from '../../lib/mockStore';
+import { Download, BarChart2, Shield, Wrench, TrendingDown } from 'lucide-react';
 
-import React from 'react';
-import AssetGraph from '../../components/AssetGraph';
-import { apiFetch } from '../../lib/api';
+function exportJSON(filename: string, data: any) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 export default function ReportsPage() {
-  const handleExport = async (type: string) => {
-    const endpoint = type === 'AUDIT' ? 'audit-export' : type === 'FINANCE' ? 'depreciation' : null;
-    if (!endpoint) return alert('Report template is still in development.');
-    
-    try {
-      const data = await apiFetch(`/reports/${endpoint}`);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${type.toLowerCase()}-report.json`;
-      a.click();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to generate report data.');
+  const assets = getAssets();
+  const tickets = getTickets();
+  const summary = getDashboardSummary();
+  const [exported, setExported] = useState<string | null>(null);
+
+  const generateReport = (type: string) => {
+    let data: any;
+    let filename: string;
+
+    if (type === 'AUDIT') {
+      data = {
+        generatedAt: new Date().toISOString(),
+        totalAssets: assets.length,
+        assets: assets.map(a => ({
+          tagId: a.tagId,
+          modelName: a.modelName,
+          type: a.type,
+          status: a.status,
+          location: a.location,
+          assignedTo: a.assignedTo,
+          purchaseDate: a.purchaseDate,
+          purchasePrice: a.purchasePrice,
+        })),
+      };
+      filename = 'audit-report.json';
+    } else if (type === 'FINANCE') {
+      const totalValue = assets.reduce((s, a) => s + a.purchasePrice, 0);
+      data = {
+        generatedAt: new Date().toISOString(),
+        totalAssetValue: totalValue,
+        monthlyDepreciation: Math.round(totalValue * 0.02),
+        utilizationRate: summary.stats.utilization,
+        breakdown: summary.assetsByType,
+      };
+      filename = 'finance-report.json';
+    } else if (type === 'MAINTENANCE') {
+      data = {
+        generatedAt: new Date().toISOString(),
+        totalTickets: tickets.length,
+        open: tickets.filter(t => t.status === 'OPEN').length,
+        inProgress: tickets.filter(t => t.status === 'IN_PROGRESS').length,
+        resolved: tickets.filter(t => t.status === 'RESOLVED').length,
+        tickets,
+      };
+      filename = 'maintenance-report.json';
+    } else {
+      data = { ...summary, generatedAt: new Date().toISOString() };
+      filename = 'operations-report.json';
     }
+
+    exportJSON(filename, data);
+    setExported(filename);
+    setTimeout(() => setExported(null), 3000);
   };
-  const reportTemplates = [
-    { title: 'Asset Depreciation Schedule', description: 'Financial projection for IT asset value over 5 years.', category: 'FINANCE' },
-    { title: 'Lifecycle Distribution', description: 'Breakdown of current asset age and replacement roadmap.', category: 'OPERATIONS' },
-    { title: 'Compliance Audit Trail', description: 'Complete SHA-256 anchored history of all custodial changes.', category: 'AUDIT' },
-    { title: 'Maintenance Efficiency', description: 'Analysis of time-to-repair and predictive accuracy.', category: 'ANALYTICS' },
+
+  const totalValue = assets.reduce((s, a) => s + a.purchasePrice, 0);
+  const openTickets = tickets.filter(t => t.status === 'OPEN').length;
+  const resolvedTickets = tickets.filter(t => t.status === 'RESOLVED').length;
+
+  const reportCards = [
+    {
+      type: 'AUDIT',
+      icon: <Shield size={22} />,
+      title: 'Compliance Audit Trail',
+      description: 'Full asset registry with location, assignment, and status for all assets.',
+      stat: `${assets.length} assets`,
+      color: '#58a6ff',
+    },
+    {
+      type: 'FINANCE',
+      icon: <TrendingDown size={22} />,
+      title: 'Asset Depreciation Schedule',
+      description: `Total asset value ₹${totalValue.toLocaleString()} with ${summary.stats.utilization}% utilization rate.`,
+      stat: `₹${Math.round(totalValue * 0.02).toLocaleString()}/mo`,
+      color: '#d29922',
+    },
+    {
+      type: 'MAINTENANCE',
+      icon: <Wrench size={22} />,
+      title: 'Maintenance Efficiency',
+      description: `${openTickets} open tickets, ${resolvedTickets} resolved. Tracks repair SLA performance.`,
+      stat: `${tickets.length} tickets`,
+      color: '#ff7b78',
+    },
+    {
+      type: 'OPERATIONS',
+      icon: <BarChart2 size={22} />,
+      title: 'Operations Summary',
+      description: 'Complete operational dashboard snapshot including activity log and type breakdown.',
+      stat: `${summary.stats.assigned} assigned`,
+      color: '#3fb950',
+    },
   ];
 
   return (
     <div className="reports-container">
-      <header>
-        <h1 className="page-title">Executive Reporting</h1>
-        <p className="page-subtitle">Generate high-fidelity intelligence reports for stakeholders.</p>
+      <header className="reports-header">
+        <h1 className="page-title">Reports</h1>
+        <p className="page-subtitle">Export intelligence reports as JSON for stakeholder review.</p>
       </header>
 
+      {exported && (
+        <div className="export-toast">
+          <Download size={14} /> Downloaded: <strong>{exported}</strong>
+        </div>
+      )}
+
       <div className="reports-grid">
-        {reportTemplates.map((report, i) => (
-          <div key={i} className="report-card card glass animate-fade-in">
-            <div className="report-category">{report.category}</div>
-            <h3 className="report-title">{report.title}</h3>
-            <p className="report-description">{report.description}</p>
-            <div className="report-actions">
-              <button className="btn btn-outline" onClick={() => handleExport(report.category)}>Preview</button>
-              <button className="btn btn-primary" onClick={() => handleExport(report.category)}>Export Data</button>
+        {reportCards.map(card => (
+          <div key={card.type} className="report-card glass">
+            <div className="report-icon" style={{ color: card.color }}>{card.icon}</div>
+            <div className="report-content">
+              <h3 className="report-title">{card.title}</h3>
+              <p className="report-desc">{card.description}</p>
+              <div className="report-footer">
+                <span className="report-stat" style={{ color: card.color }}>{card.stat}</span>
+                <button
+                  className="btn btn-export"
+                  style={{ borderColor: card.color, color: card.color }}
+                  onClick={() => generateReport(card.type)}
+                >
+                  <Download size={13} /> Export JSON
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      <section className="relationship-graph">
-        <h2 className="section-title-large">Network Topology</h2>
-        <AssetGraph />
-      </section>
-
-      <style jsx>{`
-        .reports-container {
-          display: flex;
-          flex-direction: column;
-          gap: 40px;
-        }
-
-        .reports-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 24px;
-        }
-
-        .report-card {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          padding: 32px;
-        }
-
-        .report-card:nth-child(1) { animation-delay: 0.1s; }
-        .report-card:nth-child(2) { animation-delay: 0.2s; }
-        .report-card:nth-child(3) { animation-delay: 0.3s; }
-        .report-card:nth-child(4) { animation-delay: 0.4s; }
-        .report-card:nth-child(5) { animation-delay: 0.5s; }
-
-        .report-category {
-          font-size: 0.7rem;
-          font-weight: 800;
-          letter-spacing: 1.5px;
-          color: var(--accent-primary);
-          background: rgba(88, 166, 255, 0.1);
-          padding: 4px 8px;
-          border-radius: 4px;
-          align-self: flex-start;
-        }
-
-        .report-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-        }
-
-        .report-description {
-          font-size: 0.9rem;
-          color: var(--text-secondary);
-          flex: 1;
-          margin-bottom: 24px;
-        }
-
-        .report-actions {
-          display: grid;
-          grid-template-columns: 1fr 1.5fr;
-          gap: 12px;
-        }
-
-        .btn-outline {
-          background: transparent;
-          border: 1px solid var(--border-color);
-          color: var(--text-primary);
-        }
-
-        .section-title-large {
-          font-size: 1.5rem;
-          font-weight: 800;
-          margin-bottom: 24px;
-          color: var(--text-primary);
-        }
-
-        .relationship-graph {
-          margin-top: 40px;
-        }
+      <style>{`
+        .reports-container { display: flex; flex-direction: column; gap: 24px; padding: 24px; }
+        .reports-header { margin-bottom: 4px; }
+        .page-title { font-size: 1.6rem; font-weight: 800; margin: 0; }
+        .page-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+        .export-toast { display: flex; align-items: center; gap: 8px; background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.3); color: #3fb950; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; }
+        .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .report-card { padding: 24px; border-radius: 12px; display: flex; gap: 16px; align-items: flex-start; }
+        .report-icon { flex-shrink: 0; margin-top: 2px; }
+        .report-content { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .report-title { font-size: 1rem; font-weight: 700; margin: 0; }
+        .report-desc { font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+        .report-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .report-stat { font-size: 0.9rem; font-weight: 700; }
+        .btn-export { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 7px; background: transparent; border: 1px solid; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .btn-export:hover { opacity: 0.75; }
       `}</style>
     </div>
   );

@@ -4,6 +4,7 @@ services:
     name: vaultiq-backend
     runtime: node
     region: singapore
+    plan: free
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npx nest build
     startCommand: node dist/main
@@ -30,6 +31,7 @@ services:
     name: vaultiq-frontend
     runtime: node
     region: singapore
+    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     startCommand: npm run start

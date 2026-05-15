@@ -3,6 +3,7 @@ import AssetDetailClient from './AssetDetailClient';
 export function generateStaticParams() {
   return [];
 }
+export const dynamicParams = false;
 
 type Props = { params: { id: string } };
 

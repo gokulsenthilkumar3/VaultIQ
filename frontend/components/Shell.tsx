@@ -11,12 +11,14 @@ import {
   ClipboardList,
   LogOut,
   Triangle,
+  GitFork,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   { href: '/inventory', label: 'Inventory', icon: <Package size={18} /> },
   { href: '/scanner', label: 'Scanner', icon: <ScanQrCode size={18} /> },
+  { href: '/graph', label: 'Graph', icon: <GitFork size={18} /> },
   { href: '/maintenance', label: 'Maintenance', icon: <Wrench size={18} /> },
   { href: '/reports', label: 'Reports', icon: <ClipboardList size={18} /> },
 ];

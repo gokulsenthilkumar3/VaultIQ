@@ -1,19 +1,19 @@
 services:
-  # ── NestJS Backend ────────────────────────────────────────────────────
+  # --- NestJS Backend ---
   - type: web
     name: vaultiq-backend
     runtime: node
     region: singapore
     plan: free
     rootDir: backend
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: node dist/main
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001
+        value: 4000
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
@@ -26,7 +26,7 @@ services:
       - key: FRONTEND_URL
         sync: false
 
-  # ── Next.js Frontend ────────────────────────────────────────────────
+  # --- Next.js Frontend ---
   - type: web
     name: vaultiq-frontend
     runtime: node
@@ -39,15 +39,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: vaultiq-backend
-          property: host
+        sync: false
 
-  # ── Redis Cache ─────────────────────────────────────────────────────
+  # --- Redis ---
   - type: redis
     name: vaultiq-redis
     region: singapore
     plan: free
-    maxmemoryPolicy: allkeys-lru
     ipAllowList: []

@@ -93,7 +93,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
         <main className="main-content">
-          <RoleGuard>
+          <RoleGuard roles={['ADMIN', 'MANAGER']}>
             <button
               className="btn btn-primary fab-add"
               onClick={() => setIsAddAssetOpen(true)}

@@ -1,208 +1,127 @@
-"use client";
-
+'use client';
 import React from 'react';
-import useSWR from 'swr';
-import { apiFetch } from '../../lib/api';
-import { Laptop, RotateCcw, Wrench } from 'lucide-react';
+import { Laptop, RotateCcw, Wrench, Plus, CheckCircle, Archive } from 'lucide-react';
+import { getDashboardSummary } from '../../lib/mockStore';
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function activityIcon(type: string) {
+  if (type === 'checkout') return <Laptop size={16} />;
+  if (type === 'checkin') return <RotateCcw size={16} />;
+  if (type === 'maintenance') return <Wrench size={16} />;
+  if (type === 'added') return <Plus size={16} />;
+  if (type === 'retired') return <Archive size={16} />;
+  return <CheckCircle size={16} />;
+}
 
 export default function Dashboard() {
-  const { data, error, isLoading } = useSWR<any>('/assets/summary', apiFetch);
+  const summary = getDashboardSummary();
+  const { stats, recentActivities, assetsByType } = summary;
 
-  if (error || !data) return <div className="error-card glass">Failed to load operational data.</div>;
-  if (isLoading) return <div className="loading">Initializing Neural Dashboard...</div>;
+  const maxCount = Math.max(...assetsByType.map(x => x.count), 1);
 
-  const summary = data as any;
-
-  const stats = [
-    { label: 'Total Assets', value: summary.stats.total.toLocaleString(), trend: '+0%', status: 'primary' },
-    { label: 'Assigned', value: summary.stats.assigned.toLocaleString(), trend: `${Math.round(summary.stats.utilization)}%`, status: 'success' },
-    { label: 'In Maintenance', value: summary.stats.maintenance.toLocaleString(), trend: '0%', status: 'warning' },
-    { label: 'Monthly Depreciation', value: `$${summary.stats.totalMonthlyDepreciation?.toLocaleString() || 0}`, trend: '+0%', status: 'danger' },
+  const cards = [
+    { label: 'Total Assets', value: stats.total, status: 'primary' },
+    { label: 'Assigned', value: stats.assigned, status: 'success' },
+    { label: 'In Maintenance', value: stats.maintenance, status: 'warning' },
+    { label: 'Utilization', value: `${stats.utilization}%`, status: 'info' },
   ];
-
-  const renderIcon = (type: string) => {
-    if (type === 'checkout') return <Laptop size={20} />;
-    if (type === 'checkin') return <RotateCcw size={20} />;
-    return <Wrench size={20} />;
-  };
-
-  const recentActivities = summary.recentActivities;
 
   return (
     <div className="dashboard-container">
-      <header>
+      <header className="page-header">
         <h1 className="page-title">Operational Overview</h1>
         <p className="page-subtitle">Real-time insights into your office inventory and asset lifecycle.</p>
       </header>
 
       <section className="stats-grid">
-        {stats.map((stat, i) => (
-          <div key={i} className="card stat-card animate-fade-in" data-index={i}>
-            <p className="stat-label">{stat.label}</p>
-            <div className="stat-value-row">
-              <h2 className="stat-value">{stat.value}</h2>
-              <span className="stat-trend" data-status={stat.status}>{stat.trend}</span>
-            </div>
+        {cards.map((card, i) => (
+          <div key={i} className={`stat-card glass stat-${card.status}`}>
+            <div className="stat-value">{card.value}</div>
+            <div className="stat-label">{card.label}</div>
           </div>
         ))}
       </section>
 
-      <div className="dashboard-content-grid">
-        <section className="card activity-section glass">
-          <h3 className="section-title">Recent Activity</h3>
-          <div className="activity-list">
-            {recentActivities.map((activity: any, i: number) => (
-              <div key={i} className="activity-item">
-                <span className="activity-icon">{renderIcon(activity.icon)}</span>
+      <div className="dashboard-grid">
+        <section className="glass activity-section">
+          <h2 className="section-title">Recent Activity</h2>
+          <ul className="activity-list">
+            {recentActivities.map((act: any) => (
+              <li key={act.id} className="activity-item">
+                <span className={`activity-icon act-${act.type}`}>{activityIcon(act.type)}</span>
                 <div className="activity-details">
-                  <p className="activity-text"><strong>{activity.user}</strong> {activity.action}</p>
-                  <p className="activity-time">{new Date(activity.time).toLocaleString()}</p>
+                  <span className="activity-name">{act.assetName}</span>
+                  <span className="activity-tag">{act.tagId}</span>
+                  <span className="activity-user">{act.user}</span>
                 </div>
-              </div>
+                <span className="activity-time">{timeAgo(act.timestamp)}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
 
-        <section className="card maintenance-section glass">
-          <h3 className="section-title">Maintenance Queue</h3>
-          <div className="empty-state">
-            <p>View predictive diagnostics & triage.</p>
-            <a href="/maintenance" className="btn btn-primary btn-maintenance">View Schedule</a>
+        <section className="glass breakdown-section">
+          <h2 className="section-title">Asset Breakdown</h2>
+          <ul className="breakdown-list">
+            {assetsByType.map((item: any) => (
+              <li key={item.type} className="breakdown-item">
+                <span className="breakdown-type">{item.type}</span>
+                <div className="breakdown-bar-wrap">
+                  <div className="breakdown-bar" style={{ width: `${(item.count / maxCount) * 100}%` }} />
+                </div>
+                <span className="breakdown-count">{item.count}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="utilization-block">
+            <span>Utilization Rate</span>
+            <strong>{stats.utilization}%</strong>
           </div>
         </section>
       </div>
 
-      <style jsx>{`
-        .dashboard-container {
-          display: flex;
-          flex-direction: column;
-          gap: 40px;
-        }
-
-        .page-title {
-          font-size: var(--text-xl, 2rem);
-          font-weight: 800;
-          letter-spacing: -0.5px;
-          margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-          color: var(--text-secondary);
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 24px;
-        }
-
-        .stat-card {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .stat-card[data-index="0"] { animation-delay: 0s; }
-        .stat-card[data-index="1"] { animation-delay: 0.1s; }
-        .stat-card[data-index="2"] { animation-delay: 0.2s; }
-        .stat-card[data-index="3"] { animation-delay: 0.3s; }
-
-        .stat-label {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: var(--text-secondary);
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-
-        .stat-value-row {
-          display: flex;
-          align-items: baseline;
-          justify-content: space-between;
-        }
-
-        .stat-value {
-          font-size: var(--text-2xl, 2.25rem);
-          font-weight: 700;
-        }
-
-        .stat-trend {
-          font-size: 0.9rem;
-          font-weight: 700;
-          padding: 4px 8px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 6px;
-        }
-
-        .stat-trend[data-status="primary"] { color: var(--accent-primary); }
-        .stat-trend[data-status="success"] { color: var(--accent-success); }
-        .stat-trend[data-status="warning"] { color: var(--accent-warning); }
-        .stat-trend[data-status="danger"] { color: var(--accent-danger); }
-
-        .dashboard-content-grid {
-          display: grid;
-          grid-template-columns: 1.5fr 1fr;
-          gap: 24px;
-        }
-
-        .section-title {
-          font-size: 1.25rem;
-          margin-bottom: 24px;
-          font-weight: 700;
-        }
-
-        .activity-list {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .activity-item {
-          display: flex;
-          gap: 16px;
-          align-items: flex-start;
-          padding-bottom: 20px;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .activity-item:last-child {
-          border-bottom: none;
-          padding-bottom: 0;
-        }
-
-        .activity-icon {
-          font-size: 1.5rem;
-          background: rgba(255, 255, 255, 0.05);
-          width: 48px;
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 12px;
-        }
-
-        .activity-text {
-          font-size: 0.95rem;
-        }
-
-        .activity-time {
-          font-size: 0.8rem;
-          color: var(--text-secondary);
-        }
-
-        .empty-state {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          height: 200px;
-          color: var(--text-secondary);
-        }
-
-        .btn-maintenance {
-          margin-top: 16px;
-          text-decoration: none;
-        }
+      <style>{`
+        .dashboard-container { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+        .page-header { margin-bottom: 8px; }
+        .page-title { font-size: 1.6rem; font-weight: 800; margin: 0; }
+        .page-subtitle { color: var(--text-secondary); margin-top: 4px; font-size: 0.9rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .stat-card { display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: 12px; }
+        .stat-primary .stat-value { color: var(--accent-primary); }
+        .stat-success .stat-value { color: #3fb950; }
+        .stat-warning .stat-value { color: #d29922; }
+        .stat-info .stat-value { color: #58a6ff; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+        .stat-label { font-size: 0.78rem; color: var(--text-secondary); }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+        .section-title { font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
+        .activity-section, .breakdown-section { padding: 20px; border-radius: 12px; }
+        .activity-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+        .activity-item { display: flex; align-items: center; gap: 12px; }
+        .activity-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: rgba(255,255,255,0.06); flex-shrink: 0; }
+        .act-added { color: #3fb950; } .act-checkout { color: var(--accent-primary); } .act-checkin { color: #d29922; } .act-maintenance { color: #ff7b78; } .act-retired { color: #8b949e; }
+        .activity-details { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .activity-name { font-weight: 600; font-size: 0.88rem; }
+        .activity-tag { font-size: 0.75rem; color: var(--accent-primary); }
+        .activity-user { font-size: 0.75rem; color: var(--text-secondary); }
+        .activity-time { font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0; }
+        .breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+        .breakdown-item { display: flex; align-items: center; gap: 10px; }
+        .breakdown-type { width: 80px; font-size: 0.82rem; flex-shrink: 0; }
+        .breakdown-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+        .breakdown-bar { height: 100%; background: var(--accent-primary); border-radius: 4px; transition: width 0.4s; }
+        .breakdown-count { width: 24px; text-align: right; font-size: 0.82rem; font-weight: 700; flex-shrink: 0; }
+        .utilization-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+        .utilization-block strong { font-size: 1.4rem; color: var(--accent-primary); }
       `}</style>
     </div>
   );

@@ -5,9 +5,8 @@ services:
     runtime: node
     region: singapore
     plan: free
-    rootDir: backend
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npm run start
+    buildCommand: cd backend && npm install --include=dev && npx prisma generate && npm run build
+    startCommand: node backend/dist/main
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
@@ -32,9 +31,8 @@ services:
     runtime: node
     region: singapore
     plan: free
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm run start
     envVars:
       - key: NODE_ENV
         value: production

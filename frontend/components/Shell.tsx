@@ -4,12 +4,12 @@ import React from 'react';
 import { mutate } from 'swr';
 import { useAuth } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ScanQrCode, 
-  Wrench, 
-  ClipboardList, 
+import {
+  LayoutDashboard,
+  Package,
+  ScanQrCode,
+  Wrench,
+  ClipboardList,
   LogOut,
   Plus,
   Triangle
@@ -31,20 +31,23 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Normalize path by stripping trailing slash for comparisons
+  const normalizedPath = pathname.replace(/\/$/, '') || '/';
+
   React.useEffect(() => {
-    if (!loading && !user && pathname !== '/login') {
+    if (!loading && !user && normalizedPath !== '/login') {
       router.replace('/login');
     }
-  }, [loading, user, pathname, router]);
+  }, [loading, user, normalizedPath, router]);
 
-  if (pathname === '/login') return <>{children}</>;
+  if (normalizedPath === '/login') return <>{children}</>;
 
   if (loading || !user) {
     return (
-      <div className="shell-loader">
-        <div className="spinner" aria-label="Loading"></div>
-        <style jsx>{`.shell-loader{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-primary)}.spinner{width:40px;height:40px;border:3px solid var(--border-color);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
+      <>
+        <style>{`.shell-loader{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-primary)}.spinner{width:40px;height:40px;border:3px solid var(--border-color);border-top-color:var(--accent-primary);border-radius:50%;animation:spin 0.8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <div className="shell-loader"><div className="spinner" /></div>
+      </>
     );
   }
 
@@ -56,58 +59,52 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     .toUpperCase();
 
   return (
-    <div className="layout-wrapper">
-      <aside className="sidebar glass">
-        <div className="logo">
-          <span className="logo-icon"><Triangle size={24} fill="currentColor" /></span>
-          <span className="logo-text">VaultIQ</span>
-        </div>
-        <nav className="nav-menu" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className={`nav-item ${pathname === item.href ? 'active' : ''}`}
-              aria-current={pathname === item.href ? 'page' : undefined}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </a>
-          ))}
-        </nav>
-        <div className="user-profile">
-          <div className="user-profile-main">
-            <div className="avatar" aria-hidden="true">{initials}</div>
-            <div className="user-info">
-              <p className="user-name">{user.fullName}</p>
-              <p className="user-role">{user.role}</p>
+    <>
+      <div className="app-layout">
+        <nav className="sidebar">
+          <div className="logo">
+            <span className="logo-icon"><Triangle size={22} fill="currentColor" /></span>
+            <span>VaultIQ</span>
+          </div>
+          <ul className="nav-list">
+            {NAV_ITEMS.map((item) => (
+              <li key={item.href}>
+                <a
+                  href={item.href}
+                  className={`nav-item ${normalizedPath === item.href ? 'active' : ''}`}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <div className="user-profile">
+            <div className="user-profile-main">
+              <div className="avatar">{initials}</div>
+              <div>
+                <div className="user-name">{user.fullName}</div>
+                <div className="user-role">{user.role}</div>
+              </div>
             </div>
+            <button className="btn-logout" onClick={() => logout()} aria-label="Sign out">
+              <LogOut size={14} /> Sign out
+            </button>
           </div>
-          <button className="btn-logout" onClick={() => logout()} aria-label="Sign out">
-            <LogOut size={16} /> Sign out
-          </button>
-        </div>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-bar">
-          <div className="top-bar-spacer"></div>
-          <div className="actions">
-            <RoleGuard roles={['ADMIN', 'MANAGER']}>
-              <button
-                className="btn btn-primary"
-                onClick={() => setIsAddAssetOpen(true)}
-                aria-label="Add new asset"
-              >
-                <Plus size={18} /> Add Asset
-              </button>
-            </RoleGuard>
-          </div>
-        </header>
-
-        <div className="content-area animate-fade-in">{children}</div>
-      </main>
-
+        </nav>
+        <main className="main-content">
+          <RoleGuard>
+            <button
+              className="btn btn-primary fab-add"
+              onClick={() => setIsAddAssetOpen(true)}
+              aria-label="Add new asset"
+            >
+              <Plus size={16} /> Add Asset
+            </button>
+          </RoleGuard>
+          {children}
+        </main>
+      </div>
       {isAddAssetOpen && (
         <AddAssetModal
           onClose={() => setIsAddAssetOpen(false)}
@@ -118,35 +115,15 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           }}
         />
       )}
-
-      <style jsx>{`
+      <style>{`
         .nav-icon { font-size: 1rem; display: flex; align-items: center; }
         .logo-icon { color: var(--accent-primary); display: flex; align-items: center; }
         .btn-primary { display: flex; align-items: center; gap: 8px; }
-        .user-profile {
-          display: flex; flex-direction: column; gap: 12px;
-          margin-top: auto; padding-top: 24px;
-          border-top: 1px solid var(--border-color);
-        }
+        .user-profile { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 24px; border-top: 1px solid var(--border-color); }
         .user-profile-main { display: flex; align-items: center; gap: 12px; }
-        .btn-logout {
-          background: rgba(255,77,77,0.1);
-          color: #ff7b78;
-          border: 1px solid rgba(255,77,77,0.2);
-          padding: 8px 12px;
-          border-radius: 6px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
+        .btn-logout { background: rgba(255,77,77,0.1); color: #ff7b78; border: 1px solid rgba(255,77,77,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-logout:hover { background: rgba(255,77,77,0.2); }
       `}</style>
-    </div>
+    </>
   );
 }

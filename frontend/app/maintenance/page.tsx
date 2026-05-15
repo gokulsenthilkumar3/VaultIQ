@@ -1,198 +1,197 @@
-"use client";
-
+'use client';
 import React, { useState } from 'react';
-import useSWR from 'swr';
-import { apiFetch } from '../../lib/api';
-import ManageMaintenanceModal from '../../components/ManageMaintenanceModal';
+import { getTickets, addTicket, updateTicket, getAssets, MaintenanceTicket } from '../../lib/mockStore';
+import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, X } from 'lucide-react';
+
+const PRIORITY_COLORS: Record<string, string> = {
+  LOW: '#8b949e',
+  MEDIUM: '#d29922',
+  HIGH: '#ff7b78',
+  CRITICAL: '#f85149',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  OPEN: '#d29922',
+  IN_PROGRESS: '#58a6ff',
+  RESOLVED: '#3fb950',
+};
+
+function NewTicketModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const assets = getAssets();
+  const [assetId, setAssetId] = useState(assets[0]?.id || '');
+  const [issue, setIssue] = useState('');
+  const [priority, setPriority] = useState<MaintenanceTicket['priority']>('MEDIUM');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!issue.trim()) { setError('Please describe the issue.'); return; }
+    const asset = assets.find(a => a.id === assetId);
+    if (!asset) { setError('Select an asset.'); return; }
+    addTicket({
+      assetId: asset.id,
+      assetName: asset.modelName,
+      tagId: asset.tagId,
+      issue,
+      priority,
+      status: 'OPEN',
+      reportedBy: 'Admin User',
+    });
+    onSuccess();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card glass" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 className="modal-title">New Maintenance Ticket</h2>
+          <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+        </div>
+        {error && <div className="error-banner">{error}</div>}
+        <form onSubmit={handleSubmit} className="modal-form">
+          <label>Asset
+            <select className="input" value={assetId} onChange={e => setAssetId(e.target.value)}>
+              {assets.map(a => <option key={a.id} value={a.id}>{a.modelName} ({a.tagId})</option>)}
+            </select>
+          </label>
+          <label>Issue Description
+            <textarea className="input" rows={3} value={issue} onChange={e => setIssue(e.target.value)} placeholder="Describe the problem..." />
+          </label>
+          <label>Priority
+            <select className="input" value={priority} onChange={e => setPriority(e.target.value as MaintenanceTicket['priority'])}>
+              {(['LOW','MEDIUM','HIGH','CRITICAL'] as const).map(p => <option key={p}>{p}</option>)}
+            </select>
+          </label>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Submit Ticket</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function MaintenancePage() {
-  const { data: queue, error, isLoading, mutate } = useSWR<any[]>('/maintenance/triage', apiFetch);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [tickets, setTickets] = useState<MaintenanceTicket[]>(getTickets());
+  const [showNew, setShowNew] = useState(false);
 
-  if (error) {
-    return (
-      <div className="maintenance-container">
-        <header>
-          <h1 className="page-title">Predictive Maintenance</h1>
-        </header>
-        <div className="card glass error-card">
-          <h3 className="error-title">Connection Error</h3>
-          <p className="error-desc">Failed to load the triage queue. Please ensure backend services are responsive.</p>
-        </div>
-      </div>
-    );
-  }
+  const refresh = () => setTickets(getTickets());
 
-  if (isLoading) {
-    return (
-      <div className="maintenance-container">
-        <header>
-          <h1 className="page-title skeleton-text">Predictive Maintenance</h1>
-          <p className="page-subtitle skeleton-text">Initializing Diagnostics...</p>
-        </header>
-        <div className="maintenance-grid">
-          <section className="card glass queue-section skeleton-box skeleton-section"></section>
-          <section className="card glass health-insights skeleton-box skeleton-section"></section>
-        </div>
-      </div>
-    );
-  }
+  const open = tickets.filter(t => t.status === 'OPEN');
+  const inProgress = tickets.filter(t => t.status === 'IN_PROGRESS');
+  const resolved = tickets.filter(t => t.status === 'RESOLVED');
 
-  const items = queue as any[];
+  const handleStatusChange = (id: string, status: MaintenanceTicket['status']) => {
+    updateTicket(id, { status, ...(status === 'RESOLVED' ? { resolvedAt: new Date().toISOString() } : {}) });
+    refresh();
+  };
 
   return (
     <div className="maintenance-container">
-      <header>
-        <h1 className="page-title">Predictive Maintenance</h1>
-        <p className="page-subtitle">AI-driven hardware health monitoring and triage queue.</p>
+      <header className="maintenance-header">
+        <div>
+          <h1 className="page-title">Maintenance Queue</h1>
+          <p className="page-subtitle">{open.length} open, {inProgress.length} in progress, {resolved.length} resolved.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+          <Plus size={16} /> New Ticket
+        </button>
       </header>
 
-      <div className="maintenance-grid">
-        <section className="card glass queue-section">
-          <h3 className="section-title">Active Triage Queue</h3>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Asset</th>
-                  <th>Issue</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item: any) => (
-                  <tr key={item.id}>
-                    <td className="mono">{item.id.substring(0, 8)}</td>
-                    <td className="bold">{item.asset.modelName}</td>
-                    <td>{item.issueType}</td>
-                    <td>
-                      <span className={`badge ${item.status.toLowerCase()}`}>{item.status.replace('_', ' ')}</span>
-                    </td>
-                    <td>
-                      <button className="btn-text" onClick={() => setSelectedTicket(item)}>Manage</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="card glass health-insights">
-          <h3 className="section-title">Health Insights</h3>
-          <div className="insight-card">
-            <div className="insight-icon">🤖</div>
-            <div className="insight-content">
-              <h4>System Health Index</h4>
-              <p>Overall hardware reliability is at <span className="highlight">92%</span>. Thermal issues in Rack A-12 are the primary performance bottleneck.</p>
-            </div>
-          </div>
-        </section>
+      <div className="stats-row">
+        <div className="stat-pill stat-open"><AlertTriangle size={14} /> {open.length} Open</div>
+        <div className="stat-pill stat-progress"><Clock size={14} /> {inProgress.length} In Progress</div>
+        <div className="stat-pill stat-resolved"><CheckCircle size={14} /> {resolved.length} Resolved</div>
       </div>
 
-      <style jsx>{`
-        .maintenance-container {
-          display: flex;
-          flex-direction: column;
-          gap: 40px;
-        }
+      <div className="tickets-list">
+        {tickets.length === 0 && <p className="empty-state">No maintenance tickets. System is healthy.</p>}
+        {tickets.map(ticket => (
+          <div key={ticket.id} className="ticket-card glass">
+            <div className="ticket-header">
+              <div className="ticket-info">
+                <span className="ticket-asset">{ticket.assetName}</span>
+                <span className="ticket-tag">{ticket.tagId}</span>
+              </div>
+              <div className="ticket-badges">
+                <span className="badge" style={{ color: PRIORITY_COLORS[ticket.priority], borderColor: PRIORITY_COLORS[ticket.priority] }}>
+                  {ticket.priority}
+                </span>
+                <span className="badge" style={{ color: STATUS_COLORS[ticket.status], borderColor: STATUS_COLORS[ticket.status] }}>
+                  {ticket.status.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+            <p className="ticket-issue">{ticket.issue}</p>
+            <div className="ticket-footer">
+              <span className="ticket-meta">Reported by {ticket.reportedBy} &bull; {new Date(ticket.createdAt).toLocaleDateString()}</span>
+              <div className="ticket-actions">
+                {ticket.status === 'OPEN' && (
+                  <button className="btn btn-sm btn-outline" onClick={() => handleStatusChange(ticket.id, 'IN_PROGRESS')}>
+                    <Wrench size={12} /> Start Work
+                  </button>
+                )}
+                {ticket.status === 'IN_PROGRESS' && (
+                  <button className="btn btn-sm btn-success" onClick={() => handleStatusChange(ticket.id, 'RESOLVED')}>
+                    <CheckCircle size={12} /> Mark Resolved
+                  </button>
+                )}
+                {ticket.status === 'RESOLVED' && (
+                  <span className="resolved-label"><CheckCircle size={12} /> Resolved {ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString() : ''}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        .maintenance-grid {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 24px;
-        }
-
-        .error-card { padding: 40px; text-align: center; }
-        .error-title { color: var(--accent-danger); }
-        .error-desc { color: var(--text-secondary); }
-        .skeleton-section { height: 300px; }
-
-        .section-title {
-          margin-bottom: 24px;
-          font-weight: 700;
-        }
-
-        .table-wrapper {
-          overflow-x: auto;
-        }
-
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: left;
-        }
-
-        th {
-          padding: 16px;
-          color: var(--text-secondary);
-          font-size: 0.8rem;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        td {
-          padding: 16px;
-          border-bottom: 1px solid var(--border-color);
-          font-size: 0.9rem;
-        }
-
-        .mono { font-family: monospace; color: var(--accent-primary); }
-        .bold { font-weight: 600; }
-
-        .badge {
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 0.75rem;
-          font-weight: 700;
-        }
-
-        .badge.critical { background: rgba(218, 54, 51, 0.1); color: var(--accent-danger); }
-        .badge.high { background: rgba(210, 153, 34, 0.1); color: var(--accent-warning); }
-        .badge.low { background: rgba(88, 166, 255, 0.1); color: var(--accent-primary); }
-
-        .btn-text {
-          background: transparent;
-          border: none;
-          color: var(--accent-primary);
-          font-weight: 600;
-          cursor: pointer;
-        }
-
-        .health-insights {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .insight-card {
-          display: flex;
-          gap: 16px;
-          padding: 20px;
-          background: rgba(255, 255, 255, 0.03);
-          border-radius: 12px;
-          border: 1px solid var(--border-color);
-        }
-
-        .insight-icon { font-size: 2rem; }
-        .insight-content h4 { margin-bottom: 8px; }
-        .insight-content p { font-size: 0.9rem; color: var(--text-secondary); }
-        .highlight { color: var(--accent-success); font-weight: 700; }
-      `}</style>
-
-      {selectedTicket && (
-        <ManageMaintenanceModal 
-          item={selectedTicket} 
-          onClose={() => setSelectedTicket(null)}
-          onSuccess={() => {
-            mutate();
-            setSelectedTicket(null);
-          }}
+      {showNew && (
+        <NewTicketModal
+          onClose={() => setShowNew(false)}
+          onSuccess={() => { setShowNew(false); refresh(); }}
         />
       )}
+
+      <style>{`
+        .maintenance-container { display: flex; flex-direction: column; gap: 24px; padding: 24px; }
+        .maintenance-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .page-title { font-size: 1.6rem; font-weight: 800; margin: 0; }
+        .page-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .stat-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; border: 1px solid; }
+        .stat-open { color: #d29922; border-color: rgba(210,153,34,0.3); background: rgba(210,153,34,0.08); }
+        .stat-progress { color: #58a6ff; border-color: rgba(88,166,255,0.3); background: rgba(88,166,255,0.08); }
+        .stat-resolved { color: #3fb950; border-color: rgba(63,185,80,0.3); background: rgba(63,185,80,0.08); }
+        .tickets-list { display: flex; flex-direction: column; gap: 16px; }
+        .ticket-card { padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; }
+        .ticket-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .ticket-info { display: flex; flex-direction: column; gap: 4px; }
+        .ticket-asset { font-size: 1rem; font-weight: 700; }
+        .ticket-tag { font-size: 0.7rem; font-family: monospace; color: var(--accent-primary); background: rgba(88,166,255,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+        .ticket-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+        .badge { font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid; letter-spacing: 0.5px; }
+        .ticket-issue { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
+        .ticket-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .ticket-meta { font-size: 0.75rem; color: var(--text-muted); }
+        .ticket-actions { display: flex; gap: 8px; }
+        .btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; }
+        .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
+        .btn-success { background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid rgba(63,185,80,0.3); }
+        .resolved-label { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #3fb950; }
+        .empty-state { color: var(--text-secondary); text-align: center; padding: 40px; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-card { padding: 32px; border-radius: 16px; width: 100%; max-width: 480px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.1rem; font-weight: 700; margin: 0; }
+        .btn-icon { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
+        .modal-form { display: flex; flex-direction: column; gap: 14px; }
+        .modal-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
+        .input { background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; resize: vertical; }
+        .modal-actions { display: flex; gap: 12px; margin-top: 4px; }
+        .error-banner { background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.3); color: #ff7b78; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 12px; }
+      `}</style>
     </div>
   );
 }

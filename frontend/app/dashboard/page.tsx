@@ -6,7 +6,7 @@ import { apiFetch } from '../../lib/api';
 import { Laptop, RotateCcw, Wrench } from 'lucide-react';
 
 export default function Dashboard() {
-  const { data, error, isLoading } = useSWR('/assets/summary', apiFetch);
+  const { data, error, isLoading } = useSWR<any>('/assets/summary', apiFetch);
 
   if (error || !data) return <div className="error-card glass">Failed to load operational data.</div>;
   if (isLoading) return <div className="loading">Initializing Neural Dashboard...</div>;

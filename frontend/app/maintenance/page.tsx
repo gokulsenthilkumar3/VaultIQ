@@ -6,7 +6,7 @@ import { apiFetch } from '../../lib/api';
 import ManageMaintenanceModal from '../../components/ManageMaintenanceModal';
 
 export default function MaintenancePage() {
-  const { data: queue, error, isLoading, mutate } = useSWR('/maintenance/triage', apiFetch);
+  const { data: queue, error, isLoading, mutate } = useSWR<any[]>('/maintenance/triage', apiFetch);
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
 
   if (error) {

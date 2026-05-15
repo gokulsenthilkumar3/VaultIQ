@@ -12,7 +12,7 @@ import { Plus, ChevronRight, Search, Eye, MoveRight } from 'lucide-react';
 export default function InventoryPage() {
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: assets, error, isLoading, mutate } = useSWR('/assets', apiFetch);
+  const { data: assets, error, isLoading, mutate } = useSWR<any[]>('/assets', apiFetch);
 
   if (error || !assets) return <div className="error-card glass">Failed to load registry.</div>;
   if (isLoading) return <div className="loading">Syncing Digital Twin Registry...</div>;

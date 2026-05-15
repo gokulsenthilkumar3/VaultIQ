@@ -9,8 +9,8 @@ import { apiFetch } from '../lib/api';
  * Shows which employees are currently anchored to which hardware.
  */
 export default function AssetGraph() {
-  const { data: users, isLoading } = useSWR('/users', apiFetch);
-  const { data: assets } = useSWR('/assets', apiFetch);
+  const { data: users, isLoading } = useSWR<any[]>('/users', apiFetch);
+  const { data: assets } = useSWR<any[]>('/assets', apiFetch);
 
   if (isLoading) return <div className="loading">Mapping Digital Relationships...</div>;
 

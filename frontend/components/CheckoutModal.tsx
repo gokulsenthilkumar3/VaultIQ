@@ -11,7 +11,7 @@ interface CheckoutModalProps {
 }
 
 export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutModalProps) {
-  const { data: users } = useSWR('/users', apiFetch);
+  const { data: users } = useSWR<any[]>('/users', apiFetch);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [signatureData, setSignatureData] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

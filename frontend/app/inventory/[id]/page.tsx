@@ -10,7 +10,7 @@ import { ArrowLeft, RotateCcw, Wrench } from 'lucide-react';
 
 export default function AssetDetailPage() {
   const { id } = useParams();
-  const { data: asset, error, isLoading, mutate } = useSWR(`/assets/${id}`, apiFetch);
+  const { data: asset, error, isLoading, mutate } = useSWR<any>(`/assets/${id}`, apiFetch);
 
   if (error || !asset) return <div className="error">Failed to locate asset in the registry.</div>;
   if (isLoading) return <div className="loading">Retrieving hardware vitals...</div>;

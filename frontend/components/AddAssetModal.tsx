@@ -10,8 +10,8 @@ interface AddAssetModalProps {
 }
 
 export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps) {
-  const { data: types } = useSWR('/assets/types', apiFetch);
-  const { data: locations } = useSWR('/assets/locations', apiFetch);
+  const { data: types } = useSWR<any[]>('/assets/types', apiFetch);
+  const { data: locations } = useSWR<any[]>('/assets/locations', apiFetch);
   
   const [formData, setFormData] = useState({
     modelName: '',

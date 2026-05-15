@@ -4,6 +4,8 @@ export function generateStaticParams() {
   return [];
 }
 
-export default function AssetDetailPage() {
-  return <AssetDetailClient />;
+type Props = { params: { id: string } };
+
+export default function AssetDetailPage({ params }: Props) {
+  return <AssetDetailClient id={params.id} />;
 }

@@ -1,15 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useParams } from 'next/navigation';
 import useSWR from 'swr';
 import { apiFetch } from '../../../lib/api';
 import DigitalTwin from '../../../components/DigitalTwin';
 import BlockchainBadge from '../../../components/BlockchainBadge';
 import { ArrowLeft, RotateCcw, Wrench } from 'lucide-react';
 
-export default function AssetDetailPage() {
-  const { id } = useParams();
+export default function AssetDetailPage({ id }: { id: string }) {
   const { data: asset, error, isLoading, mutate } = useSWR<any>(`/assets/${id}`, apiFetch);
 
   if (error || !asset) return <div className="error">Failed to locate asset in the registry.</div>;

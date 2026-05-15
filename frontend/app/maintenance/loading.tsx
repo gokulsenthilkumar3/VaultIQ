@@ -1,3 +1,4 @@
+"use client";
 export default function Loading() {
   return (
     <div className="skeleton-page" aria-busy="true" aria-label="Loading maintenance queue">

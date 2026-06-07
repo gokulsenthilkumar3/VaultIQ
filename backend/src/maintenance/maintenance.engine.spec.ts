@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MaintenanceEngine } from './maintenance.engine';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
+import { MaintenanceStatus } from './dto/update-maintenance.dto';
 
 const mockPrisma = {
   maintenanceRecord: {
@@ -64,13 +65,13 @@ describe('MaintenanceEngine', () => {
   describe('updateRecord', () => {
     it('should throw NotFoundException for missing record', async () => {
       mockPrisma.maintenanceRecord.findUnique.mockResolvedValue(null);
-      await expect(engine.updateRecord('bad-id', 'COMPLETED')).rejects.toThrow(NotFoundException);
+      await expect(engine.updateRecord('bad-id', MaintenanceStatus.COMPLETED)).rejects.toThrow(NotFoundException);
     });
 
     it('should set completedAt when status is COMPLETED', async () => {
       mockPrisma.maintenanceRecord.findUnique.mockResolvedValue({ id: '1' });
-      mockPrisma.maintenanceRecord.update.mockResolvedValue({ id: '1', status: 'COMPLETED' });
-      await engine.updateRecord('1', 'COMPLETED', 'Fixed thermal paste');
+      mockPrisma.maintenanceRecord.update.mockResolvedValue({ id: '1', status: MaintenanceStatus.COMPLETED });
+      await engine.updateRecord('1', MaintenanceStatus.COMPLETED, 'Fixed thermal paste');
       expect(mockPrisma.maintenanceRecord.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ completedAt: expect.any(Date) }),

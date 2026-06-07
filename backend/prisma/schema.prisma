@@ -88,6 +88,8 @@ model AuditLog {
   userId           String
   details          String
   timestamp        DateTime  @default(now())
+  blockHash        String?
+  previousBlockHash String?
   
   user             User      @relation(fields: [userId], references: [id])
   asset            Asset?    @relation(fields: [assetId], references: [id])

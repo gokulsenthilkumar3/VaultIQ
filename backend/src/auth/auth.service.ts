@@ -2,13 +2,13 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 
-interface TokenPair {
+export interface TokenPair {
   access_token: string;
   refresh_token: string;
   expires_in: number;
 }
 
-interface AuthResponse extends TokenPair {
+export interface AuthResponse extends TokenPair {
   user: {
     id: string;
     email: string;

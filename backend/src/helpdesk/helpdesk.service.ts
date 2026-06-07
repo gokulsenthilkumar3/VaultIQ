@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto, TicketPriority } from './dto/create-ticket.dto';
 import { TriageTicketDto } from './dto/triage-ticket.dto';
 
-interface TriageResult {
+export interface TriageResult {
   suggestedPriority: TicketPriority;
   suggestedCategory: string;
   confidence: number;

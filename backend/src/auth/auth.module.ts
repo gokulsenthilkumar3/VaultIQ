@@ -17,7 +17,7 @@ import { PrismaModule } from '../prisma/prisma.module';
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: config.get<string>('JWT_EXPIRY', '15m'),
+          expiresIn: config.get<string>('JWT_EXPIRY', '15m') as any,
           issuer: 'vaultiq-api',
           audience: 'vaultiq-client',
         },

@@ -1,43 +1,36 @@
 import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PrismaService } from '../prisma/prisma.service';
+import { HelpdeskService } from './helpdesk.service';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+import { TriageTicketDto } from './dto/triage-ticket.dto';
+import { RequestWithUser } from '../auth/request-with-user.interface';
 
+@ApiTags('Helpdesk')
+@ApiBearerAuth()
 @Controller('tickets')
 @UseGuards(JwtAuthGuard)
 export class HelpdeskController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private helpdeskService: HelpdeskService) {}
 
   @Get()
+  @ApiOperation({ summary: 'List all helpdesk tickets' })
   async getTickets() {
-    return this.prisma.helpdeskTicket.findMany({
-      include: { user: true, asset: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.helpdeskService.findAll();
   }
 
   @Post()
-  async createTicket(@Body() data: any, @Request() req: any) {
-    return this.prisma.helpdeskTicket.create({
-      data: {
-        title: data.title,
-        description: data.description,
-        priority: data.priority || 'MEDIUM',
-        assetId: data.assetId,
-        userId: req.user.userId,
-      },
-      include: { user: true, asset: true },
-    });
+  @ApiOperation({ summary: 'Create a new helpdesk ticket' })
+  async createTicket(
+    @Body() dto: CreateTicketDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.helpdeskService.createTicket(dto, req.user.userId);
   }
 
   @Post('triage')
-  async triageTicket(@Body() data: any) {
-    // In a full production setup, this would call an LLM (e.g., OpenAI/Gemini)
-    // For now, return a placeholder heuristic response labeled as Demo
-    return {
-      suggestedPriority: data.description?.toLowerCase().includes('critical') ? 'HIGH' : 'MEDIUM',
-      suggestedCategory: 'Hardware (Demo Triage)',
-      confidence: 0.85,
-      aiSummary: 'Based on the description provided, this ticket requires standard triage. (Demo Mode)',
-    };
+  @ApiOperation({ summary: 'AI triage: suggest priority and category for a ticket description' })
+  async triageTicket(@Body() dto: TriageTicketDto) {
+    return this.helpdeskService.triageTicket(dto);
   }
 }

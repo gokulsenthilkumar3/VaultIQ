@@ -1,44 +1,70 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards, Req, HttpCode, HttpStatus, Query
+  Param, Body, UseGuards, Req, HttpCode,
+  HttpStatus, Query, ParseUUIDPipe, ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
+import {
+  ApiTags, ApiBearerAuth, ApiOperation,
+  ApiQuery, ApiParam, ApiResponse,
+} from '@nestjs/swagger';
 import { AssetService } from './asset.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
+import { CheckoutAssetDto } from './dto/checkout-asset.dto';
+import { CheckinAssetDto } from './dto/checkin-asset.dto';
+import { CreateAssetTypeDto } from './dto/create-type.dto';
+import { CreateLocationDto } from './dto/create-location.dto';
+import { RequestWithUser } from '../auth/request-with-user.interface';
 
+@ApiTags('Assets')
+@ApiBearerAuth()
 @Controller('assets')
 @UseGuards(JwtAuthGuard)
 export class AssetController {
   constructor(private assetService: AssetService) {}
 
   @Get()
+  @ApiOperation({ summary: 'List all assets (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
   async findAll(
-    @Query('page') page?: string, 
-    @Query('limit') limit?: string,
-    @Query('search') search?: string
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('search') search?: string,
   ) {
-    return this.assetService.findAll(page ? Number(page) : 1, limit ? Number(limit) : 20, search);
+    return this.assetService.findAll(page, Math.min(limit, 100), search);
   }
 
   @Get('summary')
+  @ApiOperation({ summary: 'Get dashboard summary stats' })
   async getSummary() {
     return this.assetService.getSummary();
   }
 
   @Get('activity')
-  async getActivity() {
-    return this.assetService.getGlobalActivityLog();
+  @ApiOperation({ summary: 'Get global activity log (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getActivity(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+  ) {
+    return this.assetService.getGlobalActivityLog(page, Math.min(limit, 100));
   }
 
   @Get('types')
+  @ApiOperation({ summary: 'List all asset types' })
   async getTypes() {
     return this.assetService.getTypes();
   }
 
   @Get('locations')
+  @ApiOperation({ summary: 'List all locations' })
   async getLocations() {
     return this.assetService.getLocations();
   }
@@ -46,23 +72,29 @@ export class AssetController {
   @Post('types')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
-  async createType(@Body('name') name: string, @Body('lifespanYears') lifespanYears?: number) {
-    return this.assetService.createType(name, lifespanYears || 3);
+  @ApiOperation({ summary: 'Create a new asset type' })
+  async createType(@Body() dto: CreateAssetTypeDto) {
+    return this.assetService.createType(dto.name, dto.lifespanYears);
   }
 
   @Post('locations')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
-  async createLocation(@Body('name') name: string, @Body('address') address?: string) {
-    return this.assetService.createLocation(name, address || 'TBD');
+  @ApiOperation({ summary: 'Create a new location' })
+  async createLocation(@Body() dto: CreateLocationDto) {
+    return this.assetService.createLocation(dto.name, dto.address ?? 'TBD');
   }
 
   @Get(':id/audit-hash')
+  @ApiOperation({ summary: 'Get cryptographic audit hash for an asset' })
+  @ApiParam({ name: 'id', description: 'Asset UUID or Tag ID' })
   async getAuditHash(@Param('id') id: string) {
     return this.assetService.getAuditHash(id);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a single asset by UUID or Tag ID' })
+  @ApiParam({ name: 'id', description: 'Asset UUID or Tag ID' })
   async findOne(@Param('id') id: string) {
     return this.assetService.findOne(id);
   }
@@ -70,6 +102,8 @@ export class AssetController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
+  @ApiOperation({ summary: 'Register a new asset' })
+  @ApiResponse({ status: 201, description: 'Asset created successfully' })
   async create(@Body() createAssetDto: CreateAssetDto) {
     return this.assetService.createAsset(createAssetDto);
   }
@@ -77,7 +111,11 @@ export class AssetController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
-  async update(@Param('id') id: string, @Body() updateAssetDto: UpdateAssetDto) {
+  @ApiOperation({ summary: 'Update an asset' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateAssetDto: UpdateAssetDto,
+  ) {
     return this.assetService.updateAsset(id, updateAssetDto);
   }
 
@@ -85,31 +123,33 @@ export class AssetController {
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Delete an asset (ADMIN only, must not be ASSIGNED)' })
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.assetService.deleteAsset(id);
   }
 
   @Post(':id/checkout')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
+  @ApiOperation({ summary: 'Check out an asset to a user' })
   async checkout(
-    @Param('id') assetId: string,
-    @Body('userId') userId: string,
-    @Body('signature') signature: string,
-    @Req() req: any,
+    @Param('id', ParseUUIDPipe) assetId: string,
+    @Body() dto: CheckoutAssetDto,
+    @Req() req: RequestWithUser,
   ) {
-    const requestingUserId = userId || req.user.userId;
-    return this.assetService.checkoutAsset(assetId, requestingUserId, signature || '');
+    const userId = dto.userId ?? req.user.userId;
+    return this.assetService.checkoutAsset(assetId, userId, dto.signature ?? '');
   }
 
   @Post(':id/checkin')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'MANAGER')
+  @ApiOperation({ summary: 'Check in an asset from the current user' })
   async checkin(
-    @Param('id') assetId: string,
-    @Body('conditionNotes') conditionNotes: string,
-    @Req() req: any,
+    @Param('id', ParseUUIDPipe) assetId: string,
+    @Body() dto: CheckinAssetDto,
+    @Req() req: RequestWithUser,
   ) {
-    return this.assetService.checkinAsset(assetId, req.user.userId, conditionNotes);
+    return this.assetService.checkinAsset(assetId, req.user.userId, dto.conditionNotes);
   }
 }

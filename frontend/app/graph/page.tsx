@@ -222,6 +222,8 @@ export default function GraphPage() {
   const svgRef      = useRef<SVGSVGElement>(null);
   const ticksRef    = useRef(0);
   const pageRef     = useRef<HTMLDivElement>(null);
+  const prevW       = useRef<number>(0);
+  const prevH       = useRef<number>(0);
 
   const getWH = () => ({
     W: typeof window !== 'undefined' ? window.innerWidth  - (selectedId ? 360 : 0) - 220 : 900,
@@ -237,6 +239,9 @@ export default function GraphPage() {
     if (!assetsData || !activityData || !ticketsData) return;
 
     const { W, H } = getWH();
+    prevW.current = W;
+    prevH.current = H;
+
     const assets = assetsData.data.map((a: any) => ({
       ...a,
       type: a.type.name,
@@ -253,6 +258,23 @@ export default function GraphPage() {
     settledRef.current = false;
     setTimeout(() => setLoading(false), 220);
   }, [assetsData, activityData, ticketsData]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (!settledRef.current) return;
+      const { W, H } = getWH();
+      nodesRef.current = nodesRef.current.map(n => ({
+        ...n,
+        x: n.x * (W / prevW.current),
+        y: n.y * (H / prevH.current),
+      }));
+      setNodes([...nodesRef.current]);
+      prevW.current = W;
+      prevH.current = H;
+    };
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [selectedId]);
 
   // Physics + staggered fade-in
   useEffect(() => {
@@ -567,12 +589,12 @@ export default function GraphPage() {
             {/* Radial center glow */}
             <radialGradient id="center-glow" cx="50%" cy="50%" r="50%">
               <stop offset="0%"   stopColor="#1d4ed8" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="#0d1117" stopOpacity="0" />
+              <stop offset="100%" stopColor="var(--bg-secondary)" stopOpacity="0" />
             </radialGradient>
             {/* Vignette */}
             <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-              <stop offset="50%" stopColor="#0d1117" stopOpacity="0" />
-              <stop offset="100%" stopColor="#0d1117" stopOpacity="0.55" />
+              <stop offset="50%" stopColor="var(--bg-secondary)" stopOpacity="0" />
+              <stop offset="100%" stopColor="var(--bg-secondary)" stopOpacity="0.55" />
             </radialGradient>
             {/* Blur filter for nodes on hover */}
             <filter id="glow-sm" x="-40%" y="-40%" width="180%" height="180%">
@@ -620,6 +642,7 @@ export default function GraphPage() {
                 const dimmed = hoveredId && !isHigh;
                 const mx = (src.x + tgt.x) / 2, my = (src.y + tgt.y) / 2;
                 const path = bezierPath(src.x, src.y, tgt.x, tgt.y);
+                const dist = Math.sqrt(Math.pow(src.x - tgt.x, 2) + Math.pow(src.y - tgt.y, 2));
                 return (
                   <g key={edge.id} opacity={dimmed ? 0.07 : isHigh ? 1 : 0.5}
                      style={{ transition: 'opacity 0.2s' }}>
@@ -633,12 +656,12 @@ export default function GraphPage() {
                       stroke={`url(#grad-${edge.id})`}
                       strokeWidth={hoveredId && isHigh ? meta.w + 1.5 : meta.w}
                       strokeDasharray={meta.dash === 'none' ? undefined : meta.dash}
-                      markerEnd={`url(#arrow-${edge.edgeType})`}
+                      markerEnd={dist > 60 ? `url(#arrow-${edge.edgeType})` : undefined}
                       className={edge.edgeType === 'assigned' ? 'edge-flow' : ''}
                     />
                     {/* Pill label */}
                     <rect x={mx - 26} y={my - 8} width={52} height={14} rx={7}
-                      fill="rgba(13,17,23,0.75)" stroke={meta.stroke} strokeWidth="0.5" strokeOpacity="0.4" />
+                      fill="var(--bg-secondary)" fillOpacity="0.75" stroke={meta.stroke} strokeWidth="0.5" strokeOpacity="0.4" />
                     <text x={mx} y={my + 1} textAnchor="middle" fontSize="8" fill={meta.stroke}
                       style={{ pointerEvents: 'none', userSelect: 'none' }}>
                       {edge.label}
@@ -684,7 +707,7 @@ export default function GraphPage() {
                         stroke={isSelected ? color : color + '55'} strokeWidth={2.5} />
                       {/* Glassmorphism fill */}
                       <circle r={NODE_R}
-                        fill="rgba(13,17,23,0.65)"
+                        fill="var(--bg-secondary)" fillOpacity="0.65"
                         stroke={isSelected ? color : color + '66'}
                         strokeWidth={isSelected ? 2.5 : 1.5} />
                       {/* Radial gradient shimmer */}
@@ -692,7 +715,7 @@ export default function GraphPage() {
                       <defs>
                         <radialGradient id={`user-grad-${node.id}`} cx="35%" cy="30%" r="70%">
                           <stop offset="0%"   stopColor="#58a6ff" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#1a3a5c" stopOpacity="0.0" />
+                          <stop offset="100%" stopColor="var(--bg-secondary)" stopOpacity="0.0" />
                         </radialGradient>
                       </defs>
                       {/* Initials */}
@@ -702,14 +725,14 @@ export default function GraphPage() {
                         {node.label.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()}
                       </text>
                       {/* Label */}
-                      <text y={NODE_R + 16} textAnchor="middle" fontSize="10" fill="#c9d1d9"
+                      <text y={NODE_R + 16} textAnchor="middle" fontSize="10" fill="var(--text-primary)"
                         fontWeight="600" letterSpacing="0.3"
                         style={{ pointerEvents: 'none', userSelect: 'none' }}>
                         {node.label}
                       </text>
                       {/* Role dot */}
                       <circle cx={NODE_R - 6} cy={NODE_R - 6} r={5}
-                        fill="rgba(13,17,23,0.8)" stroke={node.label === 'Admin User' ? '#3fb950' : '#39d353'} strokeWidth={1.5} />
+                        fill="var(--bg-secondary)" fillOpacity="0.8" stroke={node.label === 'Admin User' ? '#3fb950' : '#39d353'} strokeWidth={1.5} />
                     </>
                   ) : (
                     <>
@@ -720,7 +743,7 @@ export default function GraphPage() {
                       )}
                       {/* Main card */}
                       <rect x={-RECT_W/2} y={-RECT_H/2} width={RECT_W} height={RECT_H} rx={10}
-                        fill="rgba(13,17,23,0.75)"
+                        fill="var(--bg-secondary)" fillOpacity="0.75"
                         stroke={isSelected ? color : isUnassigned ? color + '33' : color + '66'}
                         strokeWidth={isSelected ? 2.5 : 1.5}
                         strokeDasharray={isUnassigned ? '5,3' : 'none'} />
@@ -739,7 +762,7 @@ export default function GraphPage() {
                         {node.assetType}
                       </text>
                       {/* Model name */}
-                      <text y={RECT_H/2 + 14} textAnchor="middle" fontSize="9" fill="#c9d1d9"
+                      <text y={RECT_H/2 + 14} textAnchor="middle" fontSize="9" fill="var(--text-primary)"
                         style={{ pointerEvents: 'none', userSelect: 'none' }}>
                         {node.label.length > 15 ? node.label.slice(0,14)+'…' : node.label}
                       </text>
@@ -805,30 +828,30 @@ export default function GraphPage() {
 
       <style>{`
         /* Page */
-        .graph-page { display:flex;flex-direction:column;height:100vh;overflow:hidden;background:#0d1117;position:relative; }
+        .graph-page { display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg-secondary);position:relative; }
 
         /* Toolbar */
         .graph-toolbar {
           display:flex;align-items:center;gap:10px;padding:0 16px;height:52px;flex-shrink:0;
-          background:rgba(13,17,23,0.88);
+          background:var(--glass-bg);
           backdrop-filter:blur(16px);
           border-bottom:1px solid rgba(255,255,255,0.08);
           z-index:10;
         }
         .tb-search { display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0 10px;height:30px;width:180px; }
         .tb-search-icon { color:rgba(255,255,255,0.3);flex-shrink:0; }
-        .tb-search-input { background:none;border:none;color:#e6edf3;font-size:0.78rem;outline:none;width:100%; }
+        .tb-search-input { background:none;border:none;color:var(--text-primary);font-size:0.78rem;outline:none;width:100%; }
         .tb-search-input::placeholder { color:rgba(255,255,255,0.25); }
         .tb-search-clear { background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:2px;display:flex; }
         .tb-pills { display:flex;gap:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:3px; }
         .tb-pill { background:none;border:none;color:rgba(255,255,255,0.4);padding:3px 11px;border-radius:7px;font-size:0.78rem;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:5px;white-space:nowrap; }
-        .tb-pill:hover { color:#e6edf3; }
+        .tb-pill:hover { color:var(--text-primary); }
         .tb-pill.active { background:rgba(88,166,255,0.15);color:#58a6ff;font-weight:600; }
         .tb-badge { background:rgba(88,166,255,0.2);color:#58a6ff;font-size:0.65rem;font-weight:700;padding:1px 5px;border-radius:999px; }
         .tb-dropdowns { display:flex;gap:8px; }
         .tb-dd-wrap { display:flex;align-items:center;gap:5px; }
         .tb-dd-label { font-size:0.72rem;color:rgba(255,255,255,0.3); }
-        .tb-dd { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#e6edf3;padding:4px 8px;border-radius:7px;font-size:0.78rem;cursor:pointer;outline:none; }
+        .tb-dd { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text-primary);padding:4px 8px;border-radius:7px;font-size:0.78rem;cursor:pointer;outline:none; }
         .tb-actions { display:flex;gap:4px;margin-left:auto; }
         .tb-icon-btn { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s; }
         .tb-icon-btn:hover { background:rgba(88,166,255,0.1);color:#58a6ff;border-color:rgba(88,166,255,0.3); }
@@ -847,7 +870,7 @@ export default function GraphPage() {
         .edge-flow { stroke-dasharray:6,4;animation:edge-flow 1.2s linear infinite; }
 
         /* Detail panel */
-        .detail-panel { width:0;min-width:0;overflow:hidden;transition:width 0.28s cubic-bezier(0.4,0,0.2,1),min-width 0.28s cubic-bezier(0.4,0,0.2,1);background:rgba(13,17,23,0.92);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,0.07);flex-direction:column;display:flex; }
+        .detail-panel { width:0;min-width:0;overflow:hidden;transition:width 0.28s cubic-bezier(0.4,0,0.2,1),min-width 0.28s cubic-bezier(0.4,0,0.2,1);background:var(--bg-secondary);backdrop-filter:blur(20px);border-left:1px solid rgba(255,255,255,0.07);flex-direction:column;display:flex; }
         .detail-panel.open { width:360px;min-width:360px;overflow-y:auto; }
         .dp-close-row { display:flex;justify-content:flex-end;padding:12px 14px 0; }
         .dp-close-btn { background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer; }
@@ -855,30 +878,30 @@ export default function GraphPage() {
         .dp-avatar { width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;margin-bottom:4px; }
         .user-avatar { background:rgba(88,166,255,0.15);color:#58a6ff;border:2px solid rgba(88,166,255,0.35); }
         .asset-avatar { border-radius:14px;border:2px solid rgba(255,255,255,0.1); }
-        .dp-name { font-size:1rem;font-weight:700;text-align:center;color:#e6edf3; }
+        .dp-name { font-size:1rem;font-weight:700;text-align:center;color:var(--text-primary); }
         .dp-sub  { font-size:0.78rem;color:rgba(255,255,255,0.35); }
         .dp-tag  { font-size:0.7rem;font-family:monospace;background:rgba(88,166,255,0.1);color:#58a6ff;padding:2px 10px;border-radius:999px; }
         .dp-mini-stats { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;margin-top:8px; }
         .dp-stat { display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 4px; }
-        .dp-stat b { font-size:0.9rem;font-weight:700;color:#e6edf3; }
+        .dp-stat b { font-size:0.9rem;font-weight:700;color:var(--text-primary); }
         .dp-stat span { font-size:0.65rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.5px; }
         .dp-body { padding:16px;display:flex;flex-direction:column;gap:12px; }
         .dp-section-label { font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.3);font-weight:700; }
         .dp-kv-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px;background:rgba(0,0,0,0.25);padding:12px;border-radius:10px; }
         .dp-kv { display:flex;flex-direction:column;gap:2px; }
         .dp-kv span { font-size:0.62rem;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.3); }
-        .dp-kv b { font-size:0.8rem;font-weight:600;color:#c9d1d9;word-break:break-word; }
+        .dp-kv b { font-size:0.8rem;font-weight:600;color:var(--text-primary);word-break:break-word; }
         .dp-asset-card { display:flex;align-items:center;gap:0;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.07); }
         .dp-asset-color-bar { width:3px;align-self:stretch;flex-shrink:0; }
         .dp-asset-info { flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:2px; }
-        .dp-asset-name { font-size:0.82rem;font-weight:600;color:#e6edf3; }
+        .dp-asset-name { font-size:0.82rem;font-weight:600;color:var(--text-primary); }
         .dp-asset-type { font-size:0.68rem;color:rgba(255,255,255,0.35); }
         .dp-status-dot { font-size:0.68rem;font-weight:700;padding-right:10px; }
         .dp-ticket-card { background:rgba(255,123,114,0.08);border:1px solid rgba(255,123,114,0.2);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px; }
         .dp-ticket-header { display:flex;justify-content:space-between;align-items:center; }
         .dp-ticket-pri { font-size:0.68rem;font-weight:800;letter-spacing:0.5px; }
         .dp-ticket-age { font-size:0.65rem;color:rgba(255,255,255,0.3); }
-        .dp-ticket-issue { font-size:0.8rem;color:#e6edf3; }
+        .dp-ticket-issue { font-size:0.8rem;color:var(--text-primary); }
         .dp-timeline { display:flex;flex-direction:column;gap:0; }
         .dp-timeline-item { display:flex;gap:10px;align-items:flex-start; }
         .dp-tl-line { display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:3px; }
@@ -894,7 +917,7 @@ export default function GraphPage() {
         .dp-empty-icon { font-size:2rem;opacity:0.3; }
 
         /* Legend */
-        .legend-card { position:absolute;bottom:20px;left:20px;z-index:20;background:rgba(13,17,23,0.88);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;min-width:130px; }
+        .legend-card { position:absolute;bottom:20px;left:20px;z-index:20;background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;min-width:130px; }
         .legend-title { font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.35);margin-bottom:8px; }
         .legend-section { font-size:0.65rem;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.25);margin:4px 0 4px; }
         .legend-row { display:flex;align-items:center;gap:7px;font-size:0.74rem;color:rgba(255,255,255,0.55);padding:2px 0; }

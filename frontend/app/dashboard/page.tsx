@@ -24,11 +24,53 @@ function activityIcon(type: string) {
   return <CheckCircle size={15} />;
 }
 
+const SkeletonDashboard = () => (
+  <div className="dashboard-container">
+    <header className="page-header">
+      <div className="skeleton-box" style={{ width: '250px', height: '32px', marginBottom: '8px', borderRadius: '4px' }}></div>
+      <div className="skeleton-box" style={{ width: '400px', height: '16px', borderRadius: '4px' }}></div>
+    </header>
+    <div className="stats-grid">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="stat-card card">
+          <div className="skeleton-box" style={{ width: '36px', height: '36px', borderRadius: '8px', marginBottom: '6px' }}></div>
+          <div className="skeleton-box" style={{ width: '60px', height: '32px', borderRadius: '4px', marginBottom: '6px' }}></div>
+          <div className="skeleton-box" style={{ width: '100px', height: '14px', borderRadius: '4px' }}></div>
+        </div>
+      ))}
+    </div>
+    <div className="dashboard-grid">
+      <section className="activity-section card">
+        <div className="skeleton-box" style={{ width: '150px', height: '24px', marginBottom: '16px', borderRadius: '4px' }}></div>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+            <div className="skeleton-box" style={{ width: '30px', height: '30px', borderRadius: '8px' }}></div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="skeleton-box" style={{ width: '120px', height: '14px', borderRadius: '4px' }}></div>
+              <div className="skeleton-box" style={{ width: '80px', height: '12px', borderRadius: '4px' }}></div>
+            </div>
+          </div>
+        ))}
+      </section>
+      <section className="breakdown-section card">
+        <div className="skeleton-box" style={{ width: '150px', height: '24px', marginBottom: '16px', borderRadius: '4px' }}></div>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '12px', alignItems: 'center' }}>
+            <div className="skeleton-box" style={{ width: '60px', height: '14px', borderRadius: '4px' }}></div>
+            <div className="skeleton-box" style={{ flex: 1, height: '6px', borderRadius: '4px' }}></div>
+            <div className="skeleton-box" style={{ width: '20px', height: '14px', borderRadius: '4px' }}></div>
+          </div>
+        ))}
+      </section>
+    </div>
+  </div>
+);
+
 export default function Dashboard() {
   const { data: summary, error } = useSWR('/assets/summary', fetcher, { refreshInterval: 5000 });
 
   if (error) return <div style={{ padding: 40, color: 'red' }}>Failed to load dashboard</div>;
-  if (!summary) return <div style={{ padding: 40 }}>Loading...</div>;
+  if (!summary) return <SkeletonDashboard />;
 
   const { stats, recentActivities, assetsByType } = summary;
   const maxCount = Math.max(...(assetsByType || []).map((x: any) => x.count), 1);
@@ -109,6 +151,7 @@ export default function Dashboard() {
           flex-direction: column;
           gap: 24px;
           max-width: 1200px;
+          min-height: calc(100vh - 80px);
         }
         .page-header { margin-bottom: 4px; }
         .page-title { font-size: 1.75rem; font-weight: 800; margin: 0; }
@@ -136,7 +179,7 @@ export default function Dashboard() {
           display: inline-flex;
           padding: 8px;
           border-radius: 8px;
-          background: rgba(255,255,255,0.06);
+          background: rgba(var(--icon-bg, 88, 166, 255), 0.1);
         }
         .stat-primary .stat-icon { color: var(--accent-primary); }
         .stat-success .stat-icon { color: #3fb950; }
@@ -183,7 +226,7 @@ export default function Dashboard() {
         .breakdown-item { display: flex; align-items: center; gap: 10px; }
         .breakdown-type { width: 80px; font-size: 0.82rem; flex-shrink: 0; color: var(--text-secondary); }
         .breakdown-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
-        .breakdown-bar { height: 100%; background: var(--accent-primary); border-radius: 4px; transition: width 0.5s ease; }
+        .breakdown-bar { height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); border-radius: 4px; transition: width 0.5s ease; }
         .breakdown-count { width: 24px; text-align: right; font-size: 0.82rem; font-weight: 700; flex-shrink: 0; }
         .utilization-block {
           margin-top: 20px;

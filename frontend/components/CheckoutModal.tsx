@@ -126,7 +126,7 @@ export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutMod
 
         .input-group { display: flex; flex-direction: column; gap: 8px; }
         .input-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
-        .input-group select, .input-group input { padding: 12px; border: 1px solid var(--border-color); color: white; border-radius: 8px; outline: none; background: rgba(255, 255, 255, 0.05); }
+        .input-group select, .input-group input { padding: 12px; border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; outline: none; background: rgba(255, 255, 255, 0.05); }
 
         .error-toast {
           background: rgba(255, 77, 77, 0.1);

@@ -9,19 +9,29 @@ export default function ScannerPage() {
   const router = useRouter();
 
   const [scanError, setScanError] = React.useState<string | null>(null);
+  const [scanSuccess, setScanSuccess] = React.useState(false);
+  const [manualId, setManualId] = React.useState('');
 
   const handleScan = async (data: string) => {
     try {
       setScanError(null);
+      setScanSuccess(true);
       const asset = await apiFetch(`/assets/${data}`);
       if (asset && asset.id) {
-        router.push(`/inventory/${asset.id}`);
+        setTimeout(() => router.push(`/inventory/${asset.id}`), 500);
       } else {
+        setScanSuccess(false);
         setScanError('Asset not found. Check the QR code and try again.');
       }
     } catch {
+      setScanSuccess(false);
       setScanError('Asset not found. Check the QR code and try again.');
     }
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualId.trim()) handleScan(manualId.trim());
   };
 
   return (
@@ -31,7 +41,7 @@ export default function ScannerPage() {
         <p className="page-subtitle">Scan QR codes to instantly check-in, check-out, or view asset vitals.</p>
       </header>
 
-      <div className="scanner-main card glass">
+      <div className={`scanner-main card glass ${scanSuccess ? 'scan-success-flash' : ''}`}>
         <div className="scanner-viewport">
           <QRScanner onScanSuccess={handleScan} />
         </div>
@@ -43,6 +53,21 @@ export default function ScannerPage() {
               <li>Ensure adequate lighting for optical recognition.</li>
               <li>VaultIQ will automatically redirect to the asset lifecycle page.</li>
             </ul>
+            
+            <div className="manual-entry">
+              <h4>Or enter manually</h4>
+              <form onSubmit={handleManualSubmit} className="manual-form">
+                <input 
+                  type="text" 
+                  value={manualId} 
+                  onChange={e => setManualId(e.target.value)} 
+                  placeholder="Enter Tag ID manually..." 
+                  className="manual-input"
+                />
+                <button type="submit" className="btn btn-primary">Go</button>
+              </form>
+            </div>
+
             {scanError && (
               <div className="error-toast glass animate-fade-in">
                 <strong>Error:</strong> {scanError}
@@ -75,7 +100,7 @@ export default function ScannerPage() {
         }
 
         .scanner-viewport {
-          background: black;
+          background: var(--bg-secondary);
           border-radius: 16px;
           overflow: hidden;
           border: 1px solid var(--border-color);
@@ -88,6 +113,7 @@ export default function ScannerPage() {
           display: flex;
           flex-direction: column;
           gap: 24px;
+          counter-reset: step;
         }
 
         .scanner-instructions h3 {
@@ -97,6 +123,7 @@ export default function ScannerPage() {
 
         .scanner-instructions ul {
           list-style: none;
+          padding: 0;
           display: flex;
           flex-direction: column;
           gap: 16px;
@@ -110,9 +137,60 @@ export default function ScannerPage() {
         }
 
         .scanner-instructions li::before {
-          content: '•';
-          color: var(--accent-primary);
-          font-size: 1.5rem;
+          counter-increment: step;
+          content: counter(step);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: var(--accent-primary);
+          color: white;
+          font-size: 0.8rem;
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+
+        .scan-success-flash {
+          animation: flashSuccess 0.5s ease;
+        }
+
+        @keyframes flashSuccess {
+          0% { box-shadow: 0 0 0px 0px rgba(63, 185, 80, 0); }
+          50% { box-shadow: 0 0 20px 5px rgba(63, 185, 80, 0.6); }
+          100% { box-shadow: 0 0 0px 0px rgba(63, 185, 80, 0); }
+        }
+
+        .manual-entry {
+          margin-top: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        
+        .manual-entry h4 {
+          font-size: 0.9rem;
+          color: var(--text-secondary);
+        }
+
+        .manual-form {
+          display: flex;
+          gap: 8px;
+        }
+
+        .manual-input {
+          flex: 1;
+          padding: 10px 14px;
+          border-radius: 8px;
+          border: 1px solid var(--border-color);
+          background: transparent;
+          color: var(--text-primary);
+          font-size: 0.9rem;
+        }
+        .manual-input:focus {
+          outline: none;
+          border-color: var(--accent-primary);
         }
       `}</style>
     </div>

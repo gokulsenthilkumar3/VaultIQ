@@ -12,6 +12,7 @@ import {
   LogOut,
   Triangle,
   GitFork,
+  Users,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/inventory', label: 'Inventory', icon: <Package size={18} /> },
   { href: '/scanner', label: 'Scanner', icon: <ScanQrCode size={18} /> },
   { href: '/graph', label: 'Graph', icon: <GitFork size={18} /> },
+  { href: '/users', label: 'Personnel', icon: <Users size={18} /> },
   { href: '/maintenance', label: 'Maintenance', icon: <Wrench size={18} /> },
   { href: '/reports', label: 'Reports', icon: <ClipboardList size={18} /> },
 ];

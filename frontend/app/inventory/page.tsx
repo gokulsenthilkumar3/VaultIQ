@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import { apiFetch } from '../../lib/api';
 import { Plus, Search, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
+import CheckoutModal from '../../components/CheckoutModal';
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: '#3fb950',
@@ -81,6 +82,7 @@ export default function InventoryPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showAdd, setShowAdd] = useState(false);
+  const [checkoutAsset, setCheckoutAsset] = useState<any>(null);
 
   // Debounce search
   React.useEffect(() => {
@@ -143,15 +145,20 @@ export default function InventoryPage() {
                   </div>
                   <div className="meta-item">
                     <span className="meta-label">Status</span>
-                    <span className="meta-value" style={{ color: STATUS_COLORS[asset.status] || '#fff' }}>
+                    <span className="meta-value" style={{ color: STATUS_COLORS[asset.status] || 'var(--text-primary)' }}>
                       ● {asset.status}
                     </span>
                   </div>
                 </div>
                 <div className="asset-actions">
-                  <Link href={`/inventory/${asset.id}`} className="btn btn-outline" style={{ gridColumn: 'span 2' }}>
+                  <Link href={`/inventory/${asset.id}`} className="btn btn-outline" style={{ gridColumn: asset.status === 'ACTIVE' ? 'span 1' : 'span 2' }}>
                     <Eye size={14} /> View Details & History
                   </Link>
+                  {asset.status === 'ACTIVE' && (
+                    <button className="btn btn-primary" onClick={() => setCheckoutAsset(asset)}>
+                      Assign
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -178,6 +185,14 @@ export default function InventoryPage() {
         />
       )}
 
+      {checkoutAsset && (
+        <CheckoutModal
+          asset={checkoutAsset}
+          onClose={() => setCheckoutAsset(null)}
+          onSuccess={() => { setCheckoutAsset(null); mutate(); }}
+        />
+      )}
+
       <style>{`
         .inventory-container { display: flex; flex-direction: column; gap: 24px; padding: 24px; }
         .inventory-header { display: flex; justify-content: space-between; align-items: flex-start; }
@@ -185,7 +200,7 @@ export default function InventoryPage() {
         .page-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
         .search-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; }
         .search-icon { color: var(--text-secondary); flex-shrink: 0; }
-        .search-bar input { background: transparent; border: none; color: white; outline: none; font-size: 0.9rem; width: 100%; }
+        .search-bar input { background: transparent; border: none; color: var(--text-primary); outline: none; font-size: 0.9rem; width: 100%; }
         .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
         .asset-card { padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px; }
         .asset-header { display: flex; justify-content: space-between; align-items: flex-start; }
@@ -208,7 +223,7 @@ export default function InventoryPage() {
         .modal-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 20px; }
         .modal-form { display: flex; flex-direction: column; gap: 12px; }
         .modal-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
-        .input { background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; }
+        .input { background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; }
         .modal-actions { display: flex; gap: 12px; margin-top: 8px; }
         .error-banner { background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.3); color: #ff7b78; padding: 10px; border-radius: 8px; font-size: 0.85rem; }
       `}</style>

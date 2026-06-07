@@ -31,6 +31,21 @@
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary:    #f6f8fa;
+    --bg-secondary:  #ffffff;
+    --bg-tertiary:   #f0f2f5;
+    --bg-sidebar:    #ffffff;
+    --text-primary:  #1c2128;
+    --text-secondary:#57606a;
+    --text-muted:    #8c959f;
+    --border-color:  rgba(0,0,0,0.08);
+    --glass-bg:      rgba(255,255,255,0.85);
+    --glass-border:  rgba(0,0,0,0.06);
+  }
+}
+
 /* ---- Reset ---- */
 *, *::before, *::after {
   margin: 0;

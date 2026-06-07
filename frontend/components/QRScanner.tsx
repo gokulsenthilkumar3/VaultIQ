@@ -21,8 +21,11 @@ export default function AssetScanner({ onScanSuccess }: ScannerProps) {
       "qr-reader",
       { 
         fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
+        qrbox: { width: 280, height: 280 },
+        aspectRatio: 1.0,
+        showTorchButtonIfSupported: true,
+        showZoomSliderIfSupported: true,
+        defaultZoomValueIfSupported: 1.5,
       },
       /* verbose= */ false
     );

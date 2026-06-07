@@ -1,22 +1,29 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { DepreciationService } from './depreciation.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
+import { CreateAssetDto } from './dto/create-asset.dto';
+import { UpdateAssetDto } from './dto/update-asset.dto';
 
 @Injectable()
 export class AssetService {
   constructor(
     private prisma: PrismaService,
-    private depreciationService: DepreciationService
+    private depreciationService: DepreciationService,
+    private blockchainService: BlockchainService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 20, search?: string) {
     const skip = (page - 1) * limit;
-    const whereClause = search ? {
-      OR: [
-        { modelName: { contains: search, mode: 'insensitive' as const } },
-        { tagId: { contains: search, mode: 'insensitive' as const } },
-      ]
-    } : {};
+    const whereClause = search
+      ? {
+          OR: [
+            { modelName: { contains: search, mode: 'insensitive' as const } },
+            { tagId: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
 
     const [data, total] = await Promise.all([
       this.prisma.asset.findMany({
@@ -38,13 +45,8 @@ export class AssetService {
       include: {
         type: true,
         location: true,
-        assignments: {
-          include: { user: true },
-          orderBy: { assignedAt: 'desc' },
-        },
-        maintenance: {
-          orderBy: { scheduledDate: 'desc' },
-        },
+        assignments: { include: { user: true }, orderBy: { assignedAt: 'desc' } },
+        maintenance: { orderBy: { scheduledDate: 'desc' } },
       },
     });
     if (!asset) throw new NotFoundException('Asset not found');
@@ -72,31 +74,31 @@ export class AssetService {
     return this.prisma.location.create({ data: { name, address } });
   }
 
-  async createAsset(data: any) {
+  async createAsset(dto: CreateAssetDto) {
     return this.prisma.asset.create({
       data: {
-        tagId: data.tagId,
-        serialNumber: data.serialNumber,
-        modelName: data.modelName,
-        typeId: data.typeId,
-        locationId: data.locationId,
-        purchasePrice: parseFloat(data.purchasePrice),
-        purchaseDate: new Date(data.purchaseDate),
+        tagId: dto.tagId,
+        serialNumber: dto.serialNumber,
+        modelName: dto.modelName,
+        typeId: dto.typeId,
+        locationId: dto.locationId,
+        purchasePrice: dto.purchasePrice,
+        purchaseDate: new Date(dto.purchaseDate),
       },
       include: { type: true, location: true },
     });
   }
 
-  async updateAsset(id: string, data: any) {
+  async updateAsset(id: string, dto: UpdateAssetDto) {
     const asset = await this.prisma.asset.findUnique({ where: { id } });
     if (!asset) throw new NotFoundException('Asset not found');
     return this.prisma.asset.update({
       where: { id },
       data: {
-        ...(data.modelName && { modelName: data.modelName }),
-        ...(data.locationId && { locationId: data.locationId }),
-        ...(data.status && { status: data.status }),
-        ...(data.typeId && { typeId: data.typeId }),
+        ...(dto.modelName !== undefined && { modelName: dto.modelName }),
+        ...(dto.locationId !== undefined && { locationId: dto.locationId }),
+        ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.typeId !== undefined && { typeId: dto.typeId }),
       },
       include: { type: true, location: true },
     });
@@ -106,7 +108,9 @@ export class AssetService {
     const asset = await this.prisma.asset.findUnique({ where: { id } });
     if (!asset) throw new NotFoundException('Asset not found');
     if (asset.status === 'ASSIGNED') {
-      throw new BadRequestException('Cannot delete an asset that is currently assigned. Check it in first.');
+      throw new BadRequestException(
+        'Cannot delete an asset that is currently assigned. Check it in first.',
+      );
     }
     return this.prisma.asset.delete({ where: { id } });
   }
@@ -116,18 +120,37 @@ export class AssetService {
       const asset = await tx.asset.findUnique({ where: { id: assetId } });
       if (!asset) throw new NotFoundException('Asset not found');
       if (asset.status !== 'AVAILABLE') {
-        throw new BadRequestException(`Asset is currently ${asset.status} and cannot be checked out`);
+        throw new BadRequestException(
+          `Asset is currently ${asset.status} and cannot be checked out`,
+        );
       }
       await tx.asset.update({ where: { id: assetId }, data: { status: 'ASSIGNED' } });
       const assignment = await tx.assetAssignment.create({
         data: { assetId, userId, signatureBlob, assignedAt: new Date() },
       });
+
+      // Get previous block hash from last audit log for this asset
+      const lastLog = await tx.auditLog.findFirst({
+        where: { assetId },
+        orderBy: { timestamp: 'desc' },
+        select: { blockHash: true },
+      });
+
+      // Anchor to blockchain audit chain
+      const block = await this.blockchainService.anchorTransaction(
+        assetId,
+        { action: 'CHECKOUT', userId, timestamp: new Date().toISOString() },
+        lastLog?.blockHash ?? '0',
+      );
+
       await tx.auditLog.create({
         data: {
           action: 'CHECKOUT',
           assetId,
           userId,
           details: `Asset ${asset.tagId} checked out to user ${userId}`,
+          blockHash: block.hash,
+          previousBlockHash: block.previousHash,
         },
       });
       return assignment;
@@ -139,7 +162,7 @@ export class AssetService {
       const asset = await tx.asset.findUnique({ where: { id: assetId } });
       if (!asset) throw new NotFoundException('Asset not found');
       if (asset.status !== 'ASSIGNED') {
-        throw new BadRequestException(`Asset is not currently assigned`);
+        throw new BadRequestException('Asset is not currently assigned');
       }
       const openAssignment = await tx.assetAssignment.findFirst({
         where: { assetId, returnedAt: null },
@@ -152,12 +175,27 @@ export class AssetService {
         });
       }
       await tx.asset.update({ where: { id: assetId }, data: { status: 'AVAILABLE' } });
+
+      const lastLog = await tx.auditLog.findFirst({
+        where: { assetId },
+        orderBy: { timestamp: 'desc' },
+        select: { blockHash: true },
+      });
+
+      const block = await this.blockchainService.anchorTransaction(
+        assetId,
+        { action: 'CHECKIN', userId, conditionNotes, timestamp: new Date().toISOString() },
+        lastLog?.blockHash ?? '0',
+      );
+
       await tx.auditLog.create({
         data: {
           action: 'CHECKIN',
           assetId,
           userId,
           details: `Asset ${asset.tagId} returned by user ${userId}`,
+          blockHash: block.hash,
+          previousBlockHash: block.previousHash,
         },
       });
       return { success: true, assetId };
@@ -168,42 +206,38 @@ export class AssetService {
     const logs = await this.prisma.auditLog.findMany({
       where: { assetId },
       orderBy: { timestamp: 'asc' },
+      select: { action: true, timestamp: true, blockHash: true },
     });
-    const dataString = logs.map(l => `${l.action}:${l.timestamp.toISOString()}`).join('|');
-    const { createHash } = await import('crypto');
+    const dataString = logs
+      .map((l) => `${l.action}:${l.timestamp.toISOString()}:${l.blockHash ?? ''}`)
+      .join('|');
     const hash = createHash('sha256').update(dataString || assetId).digest('hex');
-    return { hash, count: logs.length };
+    return { hash, count: logs.length, chainIntact: logs.every((l) => l.blockHash !== null) };
   }
 
-  /**
-   * FIX: Replaced N+1 in-memory depreciation loop with a single
-   * aggregated DB query. Depreciation totals are computed in-memory
-   * only on the current page of assets, not all assets.
-   */
   async getSummary() {
-    const [totalAssets, assignedAssets, maintenanceAssets, recentActivities, assetsByTypeRaw] = await Promise.all([
-      this.prisma.asset.count(),
-      this.prisma.asset.count({ where: { status: 'ASSIGNED' } }),
-      this.prisma.asset.count({ where: { status: 'MAINTENANCE' } }),
-      this.prisma.auditLog.findMany({
-        take: 5,
-        orderBy: { timestamp: 'desc' },
-        include: { user: true },
-      }),
-      // Group by type in DB instead of fetching all assets
-      this.prisma.asset.groupBy({
-        by: ['typeId'],
-        _count: { typeId: true },
-      }),
-    ]);
+    const [totalAssets, assignedAssets, maintenanceAssets, recentActivities, assetsByTypeRaw] =
+      await Promise.all([
+        this.prisma.asset.count(),
+        this.prisma.asset.count({ where: { status: 'ASSIGNED' } }),
+        this.prisma.asset.count({ where: { status: 'MAINTENANCE' } }),
+        this.prisma.auditLog.findMany({
+          take: 5,
+          orderBy: { timestamp: 'desc' },
+          include: { user: true },
+        }),
+        this.prisma.asset.groupBy({
+          by: ['typeId'],
+          _count: { typeId: true },
+        }),
+      ]);
 
-    // Fetch type names only for relevant typeIds
-    const typeIds = assetsByTypeRaw.map(r => r.typeId);
+    const typeIds = assetsByTypeRaw.map((r) => r.typeId);
     const types = await this.prisma.assetType.findMany({
       where: { id: { in: typeIds } },
-      select: { id: true, name: true, lifespanYears: true },
+      select: { id: true, name: true },
     });
-    const typeMap = Object.fromEntries(types.map(t => [t.id, t]));
+    const typeMap = Object.fromEntries(types.map((t) => [t.id, t.name]));
 
     return {
       stats: {
@@ -217,18 +251,20 @@ export class AssetService {
         user: log.user.fullName,
         action: log.details,
         time: log.timestamp,
-        icon: log.action === 'CHECKOUT' ? 'checkout' : log.action === 'CHECKIN' ? 'checkin' : 'maintenance',
+        icon:
+          log.action === 'CHECKOUT'
+            ? 'checkout'
+            : log.action === 'CHECKIN'
+            ? 'checkin'
+            : 'maintenance',
       })),
-      assetsByType: assetsByTypeRaw.map(row => ({
-        type: typeMap[row.typeId]?.name ?? 'Unknown',
+      assetsByType: assetsByTypeRaw.map((row) => ({
+        type: typeMap[row.typeId] ?? 'Unknown',
         count: row._count.typeId,
       })),
     };
   }
 
-  /**
-   * FIX: Added cursor-based pagination to prevent loading 1000 rows in memory.
-   */
   async getGlobalActivityLog(page: number = 1, limit: number = 50) {
     const skip = (page - 1) * limit;
     const [logs, total] = await Promise.all([
@@ -247,6 +283,7 @@ export class AssetService {
         tagId: log.asset?.tagId,
         type: log.action.toLowerCase(),
         timestamp: log.timestamp,
+        blockHash: log.blockHash,
       })),
       total,
       page,

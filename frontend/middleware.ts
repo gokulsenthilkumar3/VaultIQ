@@ -16,10 +16,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Auth is handled client-side with AuthContext.
-  // This middleware handles the root redirect.
+  const token = request.cookies.get('vaultiq_token');
+
+  // Auth is handled client-side with AuthContext, but middleware prevents flash of unauthorized content
   if (pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL(token ? '/dashboard' : '/login', request.url));
+  }
+
+  // Protect all other non-public routes
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();

@@ -1,9 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  getAssets, getActivity, getTickets,
-  Asset, ActivityLog, MaintenanceTicket,
-} from '../../lib/mockStore';
+import useSWR from 'swr';
+import { apiFetch } from '../../lib/api';
 import {
   X, Cpu, Monitor, Printer, Server, Smartphone, Tablet,
   Mouse, Keyboard, HelpCircle, Maximize2, RotateCcw,
@@ -14,9 +12,25 @@ import Link from 'next/link';
 // ─── Types ────────────────────────────────────────────────────────────────────
 type NodeKind = 'user' | 'asset';
 
+interface Asset {
+  id: string; tagId: string; modelName: string; type: string;
+  status: string; location: string; assignedTo?: string | null;
+  purchasePrice: number; purchaseDate: string; serialNumber: string;
+}
+
+interface ActivityLog {
+  id: string; user: string; tagId: string; type: string; timestamp: string;
+}
+
+interface MaintenanceTicket {
+  id: string; assetId: string; assetName: string; tagId: string;
+  issue: string; priority: 'LOW'|'MEDIUM'|'HIGH'|'CRITICAL'; status: string;
+  createdAt: string; resolvedAt?: string;
+}
+
 interface GraphNode {
   id: string; kind: NodeKind; label: string;
-  assetType?: Asset['type']; assetStatus?: Asset['status']; assetData?: Asset;
+  assetType?: string; assetStatus?: string; assetData?: Asset;
   x: number; y: number; vx: number; vy: number; pinned?: boolean;
   opacity: number;
 }
@@ -26,6 +40,34 @@ interface GraphEdge {
   edgeType: 'assigned' | 'checkout' | 'checkin' | 'maintenance' | 'retired';
   label: string;
 }
+
+// ─── SVG Icons for Assets ─────────────────────────────────────────────────────
+const AssetIcon = ({ type, size = 16, color }: { type: string; size?: number; color?: string }) => {
+  const props = { size, color, strokeWidth: 1.5 };
+  switch (type) {
+    case 'Laptop': return <Monitor {...props} />;
+    case 'Monitor': return <Monitor {...props} />;
+    case 'Phone': return <Smartphone {...props} />;
+    case 'Tablet': return <Tablet {...props} />;
+    case 'Printer': return <Printer {...props} />;
+    case 'Server': return <Server {...props} />;
+    case 'Mouse': return <Mouse {...props} />;
+    case 'Keyboard': return <Keyboard {...props} />;
+    default: return <Cpu {...props} />;
+  }
+};
+
+const AssetIconSvg = ({ type, color }: { type: string; color: string }) => {
+  switch (type) {
+    case 'Laptop': return <path d="M4 14v-9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9M2 18h20M12 18v-2M8 18v-2M16 18v-2" fill="none" stroke={color} strokeWidth="1.5" />;
+    case 'Monitor': return <rect x="2" y="3" width="20" height="14" rx="2" fill="none" stroke={color} strokeWidth="1.5" />;
+    case 'Phone': return <rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke={color} strokeWidth="1.5" />;
+    case 'Tablet': return <rect x="4" y="2" width="16" height="20" rx="2" fill="none" stroke={color} strokeWidth="1.5" />;
+    case 'Server': return <rect x="2" y="2" width="20" height="8" rx="2" fill="none" stroke={color} strokeWidth="1.5" />;
+    case 'Printer': return <rect x="6" y="14" width="12" height="8" fill="none" stroke={color} strokeWidth="1.5" />;
+    default: return <circle cx="12" cy="12" r="8" fill="none" stroke={color} strokeWidth="1.5" />;
+  }
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ASSET_COLORS: Record<string, string> = {
@@ -187,19 +229,30 @@ export default function GraphPage() {
   });
 
   // Init
+  const { data: assetsData } = useSWR('/assets?limit=1000', url => apiFetch(url));
+  const { data: activityData } = useSWR('/assets/activity', url => apiFetch(url));
+  const { data: ticketsData } = useSWR('/maintenance', url => apiFetch(url));
+
   useEffect(() => {
+    if (!assetsData || !activityData || !ticketsData) return;
+
     const { W, H } = getWH();
-    const assets   = getAssets();
-    const activity = getActivity();
+    const assets = assetsData.data.map((a: any) => ({
+      ...a,
+      type: a.type.name,
+      location: a.location.name,
+    }));
+    const activity = activityData;
+    
     const { nodes: n, edges: e } = buildGraph(assets, activity, W, H);
     setEdges(e);
-    setTickets(getTickets());
+    setTickets(ticketsData);
     nodesRef.current = n;
     setNodes([...n]);
     ticksRef.current = 0;
     settledRef.current = false;
     setTimeout(() => setLoading(false), 220);
-  }, []);
+  }, [assetsData, activityData, ticketsData]);
 
   // Physics + staggered fade-in
   useEffect(() => {
@@ -236,8 +289,8 @@ export default function GraphPage() {
   }, [fullscreen]);
 
   // ── Visibility filters ───────────────────────────────────────────────────
-  const allAssets   = getAssets();
-  const allActivity = getActivity();
+  const allAssets   = (assetsData?.data || []).map((a: any) => ({ ...a, type: a.type.name, location: a.location.name }));
+  const allActivity = activityData || [];
   const userCount   = nodes.filter(n => n.kind === 'user').length;
   const assetCount  = nodes.filter(n => n.kind === 'asset').length;
 
@@ -323,9 +376,9 @@ export default function GraphPage() {
 
     if (selectedNode.kind === 'user') {
       const userName  = selectedNode.label;
-      const userAssets = allAssets.filter(a => a.assignedTo === userName);
-      const totalVal   = userAssets.reduce((s, a) => s + a.purchasePrice, 0);
-      const activeCount = userAssets.filter(a => a.status === 'ACTIVE').length;
+      const userAssets = allAssets.filter((a: Asset) => a.assignedTo === userName);
+      const totalVal   = userAssets.reduce((s: number, a: Asset) => s + a.purchasePrice, 0);
+      const activeCount = userAssets.filter((a: Asset) => a.status === 'ACTIVE').length;
       return (
         <>
           <div className="dp-hero" style={{ background: 'linear-gradient(135deg,rgba(88,166,255,0.18),rgba(88,166,255,0.04))' }}>
@@ -341,7 +394,7 @@ export default function GraphPage() {
           <div className="dp-body">
             <div className="dp-section-label">Assigned Assets</div>
             {userAssets.length === 0 && <div className="dp-empty">No assets assigned</div>}
-            {userAssets.map(a => (
+            {userAssets.map((a: Asset) => (
               <div key={a.id} className="dp-asset-card glass">
                 <div className="dp-asset-color-bar" style={{ background: ASSET_COLORS[a.type] || '#8b949e' }} />
                 <div className="dp-asset-info">
@@ -357,8 +410,8 @@ export default function GraphPage() {
     }
 
     const a = selectedNode.assetData!;
-    const assetActivity = allActivity.filter(ac => ac.tagId === a.tagId);
-    const assetTickets  = tickets.filter(t => t.assetId === a.id && t.status !== 'RESOLVED');
+    const assetActivity = allActivity.filter((ac: ActivityLog) => ac.tagId === a.tagId);
+    const assetTickets  = tickets.filter((t: MaintenanceTicket) => t.assetId === a.id && t.status !== 'RESOLVED');
     const accentColor   = ASSET_COLORS[a.type] || '#8b949e';
 
     return (
@@ -405,7 +458,7 @@ export default function GraphPage() {
             <>
               <div className="dp-section-label">Activity Timeline</div>
               <div className="dp-timeline">
-                {assetActivity.slice(0, 6).map((ac, i) => {
+                {assetActivity.slice(0, 6).map((ac: ActivityLog, i: number) => {
                   const edgeMeta = EDGE_META[ac.type as keyof typeof EDGE_META];
                   const dotColor = edgeMeta?.stroke || '#8b949e';
                   return (
@@ -850,39 +903,4 @@ export default function GraphPage() {
       `}</style>
     </div>
   );
-}
-
-// ─── SVG icon paths (centered at 0,0) ─────────────────────────────────────────
-function AssetIconSvg({ type, color }: { type: string; color: string }) {
-  const icons: Record<string, string> = {
-    Laptop:   'M-9-7h18v11H-9zM-11 6h22v2H-11z',
-    Monitor:  'M-10-8h20v13H-10zM-3 5h6v3H-3z',
-    Phone:    'M-5-9h10v18H-5zM-2 7h4v1H-2z',
-    Tablet:   'M-7-9h14v18H-7zM-2 7h4v1H-2z',
-    Printer:  'M-9-2h18v9H-9zM-7-7h14v5H-7zM-7 7h14v4H-7z',
-    Server:   'M-9-9h18v6H-9zM-9-1h18v6H-9zM7-7h1v2H7zM7 1h1v2H7z',
-    Mouse:    'M0-9C-5-9-7-5-7 0h7zM0-9C5-9 7-5 7 0H0zM-7 0C-7 5-4 8 0 8 4 8 7 5 7 0z',
-    Keyboard: 'M-10-5h20v10H-10zM-8-3h3v2H-8zM-4-3h3v2H-4zM0-3h3v2H0zM4-3h3v2H4zM-8 1h16v2H-8z',
-    Other:    'M0-9 L8 5 H-8 Z',
-  };
-  return (
-    <path d={icons[type] || icons.Other} fill={color} opacity={0.85}
-      style={{ pointerEvents: 'none' }} transform="translate(0,-4)" />
-  );
-}
-
-// ─── Lucide icon for detail panel ─────────────────────────────────────────────
-function AssetIcon({ type, size }: { type: string; size: number }) {
-  const p = { size, strokeWidth: 1.5 };
-  switch (type) {
-    case 'Laptop':   return <Cpu {...p} />;
-    case 'Monitor':  return <Monitor {...p} />;
-    case 'Phone':    return <Smartphone {...p} />;
-    case 'Tablet':   return <Tablet {...p} />;
-    case 'Printer':  return <Printer {...p} />;
-    case 'Server':   return <Server {...p} />;
-    case 'Mouse':    return <Mouse {...p} />;
-    case 'Keyboard': return <Keyboard {...p} />;
-    default:         return <HelpCircle {...p} />;
-  }
 }

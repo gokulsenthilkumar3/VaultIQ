@@ -9,16 +9,24 @@ export class AssetService {
     private depreciationService: DepreciationService
   ) {}
 
-  async findAll(page: number = 1, limit: number = 20) {
+  async findAll(page: number = 1, limit: number = 20, search?: string) {
     const skip = (page - 1) * limit;
+    const whereClause = search ? {
+      OR: [
+        { modelName: { contains: search } },
+        { tagId: { contains: search } },
+      ]
+    } : {};
+
     const [data, total] = await Promise.all([
       this.prisma.asset.findMany({
+        where: whereClause,
         include: { type: true, location: true },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
-      this.prisma.asset.count(),
+      this.prisma.asset.count({ where: whereClause }),
     ]);
     return { data, total, page, limit };
   }
@@ -54,6 +62,14 @@ export class AssetService {
 
   async getLocations() {
     return this.prisma.location.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  async createType(name: string, lifespanYears: number) {
+    return this.prisma.assetType.create({ data: { name, lifespanYears } });
+  }
+
+  async createLocation(name: string, address: string) {
+    return this.prisma.location.create({ data: { name, address } });
   }
 
   async createAsset(data: any) {
@@ -191,11 +207,31 @@ export class AssetService {
         totalMonthlyDepreciation: Math.round(totalMonthlyDepreciation),
       },
       recentActivities: recentActivities.map((log) => ({
+        id: log.id,
         user: log.user.fullName,
         action: log.details,
         time: log.timestamp,
         icon: log.action === 'CHECKOUT' ? 'checkout' : log.action === 'CHECKIN' ? 'checkin' : 'maintenance',
       })),
+      assetsByType: Array.from(new Set(allAssets.map(a => a.type.name))).map(type => ({
+        type,
+        count: allAssets.filter(a => a.type.name === type).length
+      })).filter(x => x.count > 0),
     };
+  }
+
+  async getGlobalActivityLog() {
+    const logs = await this.prisma.auditLog.findMany({
+      include: { user: true, asset: true },
+      orderBy: { timestamp: 'desc' },
+      take: 1000,
+    });
+    return logs.map((log) => ({
+      id: log.id,
+      user: log.user.fullName,
+      tagId: log.asset?.tagId,
+      type: log.action.toLowerCase(),
+      timestamp: log.timestamp,
+    }));
   }
 }

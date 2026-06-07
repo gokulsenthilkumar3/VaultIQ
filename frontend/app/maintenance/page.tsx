@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import { getTickets, addTicket, updateTicket, getAssets, MaintenanceTicket } from '../../lib/mockStore';
+import useSWR from 'swr';
+import { apiFetch } from '../../lib/api';
 import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, X } from 'lucide-react';
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -17,27 +18,28 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function NewTicketModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const assets = getAssets();
-  const [assetId, setAssetId] = useState(assets[0]?.id || '');
+  const { data } = useSWR('/assets?limit=1000', url => apiFetch(url));
+  const assets = data?.data || [];
+  
+  const [assetId, setAssetId] = useState('');
   const [issue, setIssue] = useState('');
-  const [priority, setPriority] = useState<MaintenanceTicket['priority']>('MEDIUM');
+  const [priority, setPriority] = useState('MEDIUM');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!issue.trim()) { setError('Please describe the issue.'); return; }
-    const asset = assets.find(a => a.id === assetId);
-    if (!asset) { setError('Select an asset.'); return; }
-    addTicket({
-      assetId: asset.id,
-      assetName: asset.modelName,
-      tagId: asset.tagId,
-      issue,
-      priority,
-      status: 'OPEN',
-      reportedBy: 'Admin User',
-    });
-    onSuccess();
+    if (!assetId) { setError('Select an asset.'); return; }
+    
+    try {
+      await apiFetch('/maintenance', {
+        method: 'POST',
+        body: JSON.stringify({ assetId, issue, priority })
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit ticket');
+    }
   };
 
   return (
@@ -51,14 +53,15 @@ function NewTicketModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
         <form onSubmit={handleSubmit} className="modal-form">
           <label>Asset
             <select className="input" value={assetId} onChange={e => setAssetId(e.target.value)}>
-              {assets.map(a => <option key={a.id} value={a.id}>{a.modelName} ({a.tagId})</option>)}
+              <option value="">Select an asset...</option>
+              {assets.map((a: any) => <option key={a.id} value={a.id}>{a.modelName} ({a.tagId})</option>)}
             </select>
           </label>
           <label>Issue Description
             <textarea className="input" rows={3} value={issue} onChange={e => setIssue(e.target.value)} placeholder="Describe the problem..." />
           </label>
           <label>Priority
-            <select className="input" value={priority} onChange={e => setPriority(e.target.value as MaintenanceTicket['priority'])}>
+            <select className="input" value={priority} onChange={e => setPriority(e.target.value)}>
               {(['LOW','MEDIUM','HIGH','CRITICAL'] as const).map(p => <option key={p}>{p}</option>)}
             </select>
           </label>
@@ -73,19 +76,27 @@ function NewTicketModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
 }
 
 export default function MaintenancePage() {
-  const [tickets, setTickets] = useState<MaintenanceTicket[]>(getTickets());
   const [showNew, setShowNew] = useState(false);
+  const { data: tickets, error, mutate } = useSWR('/maintenance', url => apiFetch(url));
 
-  const refresh = () => setTickets(getTickets());
+  const open = (tickets || []).filter((t: any) => t.status === 'OPEN');
+  const inProgress = (tickets || []).filter((t: any) => t.status === 'IN_PROGRESS');
+  const resolved = (tickets || []).filter((t: any) => t.status === 'COMPLETED'); // Mapping COMPLETED
 
-  const open = tickets.filter(t => t.status === 'OPEN');
-  const inProgress = tickets.filter(t => t.status === 'IN_PROGRESS');
-  const resolved = tickets.filter(t => t.status === 'RESOLVED');
-
-  const handleStatusChange = (id: string, status: MaintenanceTicket['status']) => {
-    updateTicket(id, { status, ...(status === 'RESOLVED' ? { resolvedAt: new Date().toISOString() } : {}) });
-    refresh();
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      await apiFetch(`/maintenance/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+      mutate();
+    } catch (err) {
+      alert('Failed to update ticket status');
+    }
   };
+
+  if (error) return <div style={{ padding: 40, color: 'red' }}>Failed to load maintenance queue.</div>;
+  if (!tickets) return <div style={{ padding: 40 }}>Loading...</div>;
 
   return (
     <div className="maintenance-container">
@@ -107,25 +118,25 @@ export default function MaintenancePage() {
 
       <div className="tickets-list">
         {tickets.length === 0 && <p className="empty-state">No maintenance tickets. System is healthy.</p>}
-        {tickets.map(ticket => (
+        {tickets.map((ticket: any) => (
           <div key={ticket.id} className="ticket-card glass">
             <div className="ticket-header">
               <div className="ticket-info">
-                <span className="ticket-asset">{ticket.assetName}</span>
-                <span className="ticket-tag">{ticket.tagId}</span>
+                <span className="ticket-asset">{ticket.asset.modelName}</span>
+                <span className="ticket-tag">{ticket.asset.tagId}</span>
               </div>
               <div className="ticket-badges">
-                <span className="badge" style={{ color: PRIORITY_COLORS[ticket.priority], borderColor: PRIORITY_COLORS[ticket.priority] }}>
-                  {ticket.priority}
+                <span className="badge" style={{ color: PRIORITY_COLORS[ticket.issueType], borderColor: PRIORITY_COLORS[ticket.issueType] }}>
+                  {ticket.issueType}
                 </span>
-                <span className="badge" style={{ color: STATUS_COLORS[ticket.status], borderColor: STATUS_COLORS[ticket.status] }}>
+                <span className="badge" style={{ color: STATUS_COLORS[ticket.status] || '#3fb950', borderColor: STATUS_COLORS[ticket.status] || '#3fb950' }}>
                   {ticket.status.replace('_', ' ')}
                 </span>
               </div>
             </div>
-            <p className="ticket-issue">{ticket.issue}</p>
+            <p className="ticket-issue">{ticket.description}</p>
             <div className="ticket-footer">
-              <span className="ticket-meta">Reported by {ticket.reportedBy} &bull; {new Date(ticket.createdAt).toLocaleDateString()}</span>
+              <span className="ticket-meta">Reported on {new Date(ticket.scheduledDate).toLocaleDateString()}</span>
               <div className="ticket-actions">
                 {ticket.status === 'OPEN' && (
                   <button className="btn btn-sm btn-outline" onClick={() => handleStatusChange(ticket.id, 'IN_PROGRESS')}>
@@ -133,12 +144,12 @@ export default function MaintenancePage() {
                   </button>
                 )}
                 {ticket.status === 'IN_PROGRESS' && (
-                  <button className="btn btn-sm btn-success" onClick={() => handleStatusChange(ticket.id, 'RESOLVED')}>
+                  <button className="btn btn-sm btn-success" onClick={() => handleStatusChange(ticket.id, 'COMPLETED')}>
                     <CheckCircle size={12} /> Mark Resolved
                   </button>
                 )}
-                {ticket.status === 'RESOLVED' && (
-                  <span className="resolved-label"><CheckCircle size={12} /> Resolved {ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString() : ''}</span>
+                {ticket.status === 'COMPLETED' && (
+                  <span className="resolved-label"><CheckCircle size={12} /> Resolved {ticket.completedAt ? new Date(ticket.completedAt).toLocaleDateString() : ''}</span>
                 )}
               </div>
             </div>
@@ -149,7 +160,7 @@ export default function MaintenancePage() {
       {showNew && (
         <NewTicketModal
           onClose={() => setShowNew(false)}
-          onSuccess={() => { setShowNew(false); refresh(); }}
+          onSuccess={() => { setShowNew(false); mutate(); }}
         />
       )}
 
@@ -179,6 +190,7 @@ export default function MaintenancePage() {
         .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
         .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
         .btn-success { background: rgba(63,185,80,0.15); color: #3fb950; border: 1px solid rgba(63,185,80,0.3); }
+        .btn-primary { background: var(--accent-primary); color: white; }
         .resolved-label { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #3fb950; }
         .empty-state { color: var(--text-secondary); text-align: center; padding: 40px; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }

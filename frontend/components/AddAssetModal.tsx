@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { apiFetch } from '../lib/api';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface AddAssetModalProps {
   onClose: () => void;
@@ -10,8 +11,8 @@ interface AddAssetModalProps {
 }
 
 export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps) {
-  const { data: types } = useSWR<any[]>('/assets/types', apiFetch);
-  const { data: locations } = useSWR<any[]>('/assets/locations', apiFetch);
+  const { data: types, mutate: mutateTypes } = useSWR<any[]>('/assets/types', apiFetch);
+  const { data: locations, mutate: mutateLocations } = useSWR<any[]>('/assets/locations', apiFetch);
   
   const [formData, setFormData] = useState({
     modelName: '',
@@ -26,8 +27,54 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const [isCreatingType, setIsCreatingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [isCreatingLocation, setIsCreatingLocation] = useState(false);
+  const [newLocationName, setNewLocationName] = useState('');
+
+  const generateTagId = () => {
+    return 'VIQ-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, tagId: generateTagId() }));
+  }, []);
+
+  const handleCreateType = async () => {
+    if (!newTypeName.trim()) return;
+    try {
+      const created = await apiFetch('/assets/types', {
+        method: 'POST',
+        body: JSON.stringify({ name: newTypeName.trim(), lifespanYears: 3 })
+      });
+      await mutateTypes();
+      setFormData({ ...formData, typeId: created.id });
+      setIsCreatingType(false);
+      setNewTypeName('');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to create asset type');
+    }
+  };
+
+  const handleCreateLocation = async () => {
+    if (!newLocationName.trim()) return;
+    try {
+      const created = await apiFetch('/assets/locations', {
+        method: 'POST',
+        body: JSON.stringify({ name: newLocationName.trim() })
+      });
+      await mutateLocations();
+      setFormData({ ...formData, locationId: created.id });
+      setIsCreatingLocation(false);
+      setNewLocationName('');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to create location');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingType || isCreatingLocation) return; // Prevent full submit if editing
     setIsSubmitting(true);
     setErrorMessage('');
     try {
@@ -46,6 +93,18 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
       setErrorMessage(err.message || 'Failed to register asset. Check serial number uniqueness.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePrintQR = () => {
+    const canvas = document.getElementById('qr-code-canvas') as HTMLCanvasElement;
+    if (canvas) {
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(`<img src="${canvas.toDataURL()}" />`);
+        win.print();
+        win.close();
+      }
     }
   };
 
@@ -82,39 +141,108 @@ export default function AddAssetModal({ onClose, onSuccess }: AddAssetModalProps
             </div>
             <div className="input-group">
               <label>Tag ID (QR/Barcode)</label>
-              <input 
-                type="text" 
-                required 
-                placeholder="VIQ-LT-XXX" 
-                value={formData.tagId}
-                onChange={e => setFormData({...formData, tagId: e.target.value})}
-              />
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="VIQ-LT-XXX" 
+                  value={formData.tagId}
+                  onChange={e => setFormData({...formData, tagId: e.target.value})}
+                  style={{ flex: 1 }}
+                />
+                {formData.tagId && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <QRCodeCanvas id="qr-code-canvas" value={formData.tagId} size={64} />
+                    <button type="button" className="btn btn-outline" style={{ padding: '4px 8px', fontSize: '0.7rem' }} onClick={handlePrintQR}>Print QR</button>
+                  </div>
+                )}
+              </div>
             </div>
+            
             <div className="input-group">
               <label htmlFor="type-select">Asset Type</label>
-              <select 
-                id="type-select"
-                aria-label="Select asset category"
-                required 
-                value={formData.typeId}
-                onChange={e => setFormData({...formData, typeId: e.target.value})}
-              >
-                <option value="">Select Type...</option>
-                {types?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+              {isCreatingType ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="e.g. Server, Mouse..."
+                    value={newTypeName}
+                    onChange={e => setNewTypeName(e.target.value)}
+                    style={{ flex: 1 }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateType();
+                      }
+                    }}
+                  />
+                  <button type="button" className="btn btn-primary" onClick={handleCreateType}>Save</button>
+                  <button type="button" className="btn btn-outline" onClick={() => setIsCreatingType(false)}>X</button>
+                </div>
+              ) : (
+                <select 
+                  id="type-select"
+                  aria-label="Select asset category"
+                  required 
+                  value={formData.typeId}
+                  onChange={e => {
+                    if (e.target.value === 'CREATE_NEW') {
+                      setIsCreatingType(true);
+                      setFormData({...formData, typeId: ''});
+                    } else {
+                      setFormData({...formData, typeId: e.target.value});
+                    }
+                  }}
+                >
+                  <option value="">Select Type...</option>
+                  {types?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  <option value="CREATE_NEW" style={{ fontWeight: 'bold', color: 'var(--accent-primary)' }}>+ Create New Type...</option>
+                </select>
+              )}
             </div>
+
             <div className="input-group">
               <label htmlFor="location-select">Storage Location</label>
-              <select 
-                id="location-select"
-                aria-label="Select initial storage location"
-                required 
-                value={formData.locationId}
-                onChange={e => setFormData({...formData, locationId: e.target.value})}
-              >
-                <option value="">Select Location...</option>
-                {locations?.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+              {isCreatingLocation ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="e.g. Desk 42, Floor 3"
+                    value={newLocationName}
+                    onChange={e => setNewLocationName(e.target.value)}
+                    style={{ flex: 1 }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateLocation();
+                      }
+                    }}
+                  />
+                  <button type="button" className="btn btn-primary" onClick={handleCreateLocation}>Save</button>
+                  <button type="button" className="btn btn-outline" onClick={() => setIsCreatingLocation(false)}>X</button>
+                </div>
+              ) : (
+                <select 
+                  id="location-select"
+                  aria-label="Select initial storage location"
+                  required 
+                  value={formData.locationId}
+                  onChange={e => {
+                    if (e.target.value === 'CREATE_NEW') {
+                      setIsCreatingLocation(true);
+                      setFormData({...formData, locationId: ''});
+                    } else {
+                      setFormData({...formData, locationId: e.target.value});
+                    }
+                  }}
+                >
+                  <option value="">Select Location...</option>
+                  {locations?.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  <option value="CREATE_NEW" style={{ fontWeight: 'bold', color: 'var(--accent-primary)' }}>+ Create New Location...</option>
+                </select>
+              )}
             </div>
             <div className="input-group">
               <label>Purchase Price ($)</label>

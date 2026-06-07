@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Post } from '@nestjs/common';
 import { MaintenanceEngine } from './maintenance.engine';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -6,6 +6,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class MaintenanceController {
   constructor(private maintenanceEngine: MaintenanceEngine) {}
+
+  @Get()
+  async findAll() {
+    return this.maintenanceEngine.findAll();
+  }
+
+  @Post()
+  async create(@Body() data: any) {
+    return this.maintenanceEngine.createRecord(data);
+  }
 
   @Get('triage')
   async getTriage() {

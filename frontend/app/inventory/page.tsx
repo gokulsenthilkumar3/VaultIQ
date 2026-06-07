@@ -1,11 +1,13 @@
 'use client';
 import React, { useState } from 'react';
-import { getAssets, updateAsset, addAsset, getActivity, Asset, ASSET_TYPES, LOCATIONS } from '../../lib/mockStore';
-import { Plus, Search, Eye, ChevronRight } from 'lucide-react';
+import useSWR from 'swr';
+import { apiFetch } from '../../lib/api';
+import { Plus, Search, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: '#3fb950',
+  ASSIGNED: '#58a6ff',
   MAINTENANCE: '#d29922',
   RETIRED: '#8b949e',
   LOST: '#ff7b78',
@@ -13,24 +15,32 @@ const STATUS_COLORS: Record<string, string> = {
 
 function AddAssetModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [form, setForm] = useState({
-    modelName: '', serialNumber: '', tagId: '', type: 'Laptop' as Asset['type'],
-    location: LOCATIONS[0], assignedTo: '', purchasePrice: '', purchaseDate: new Date().toISOString().split('T')[0],
-    status: 'ACTIVE' as Asset['status'],
+    modelName: '', serialNumber: '', tagId: '', typeId: '',
+    locationId: '', purchasePrice: '', purchaseDate: new Date().toISOString().split('T')[0],
   });
   const [error, setError] = useState('');
+  
+  const { data: types } = useSWR('/assets/types', url => apiFetch(url));
+  const { data: locations } = useSWR('/assets/locations', url => apiFetch(url));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.modelName || !form.serialNumber || !form.tagId) {
-      setError('Model name, serial number, and tag ID are required.');
+    if (!form.modelName || !form.serialNumber || !form.tagId || !form.typeId || !form.locationId) {
+      setError('Please fill in all required fields.');
       return;
     }
-    addAsset({
-      ...form,
-      purchasePrice: parseFloat(form.purchasePrice) || 0,
-      assignedTo: form.assignedTo || null,
-    });
-    onSuccess();
+    try {
+      await apiFetch('/assets', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          purchasePrice: parseFloat(form.purchasePrice) || 0,
+        })
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add asset');
+    }
   };
 
   return (
@@ -42,9 +52,18 @@ function AddAssetModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           <label>Model Name<input className="input" value={form.modelName} onChange={e => setForm({...form, modelName: e.target.value})} placeholder="e.g. Dell XPS 15" /></label>
           <label>Serial Number<input className="input" value={form.serialNumber} onChange={e => setForm({...form, serialNumber: e.target.value})} placeholder="SN-XXXX" /></label>
           <label>Tag ID<input className="input" value={form.tagId} onChange={e => setForm({...form, tagId: e.target.value})} placeholder="VIQ-XXX" /></label>
-          <label>Type<select className="input" value={form.type} onChange={e => setForm({...form, type: e.target.value as Asset['type']})}>{ASSET_TYPES.map(t => <option key={t}>{t}</option>)}</select></label>
-          <label>Location<select className="input" value={form.location} onChange={e => setForm({...form, location: e.target.value})}>{LOCATIONS.map(l => <option key={l}>{l}</option>)}</select></label>
-          <label>Assigned To<input className="input" value={form.assignedTo} onChange={e => setForm({...form, assignedTo: e.target.value})} placeholder="Leave blank if unassigned" /></label>
+          <label>Type
+            <select className="input" value={form.typeId} onChange={e => setForm({...form, typeId: e.target.value})}>
+              <option value="">Select a type...</option>
+              {types?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </label>
+          <label>Location
+            <select className="input" value={form.locationId} onChange={e => setForm({...form, locationId: e.target.value})}>
+              <option value="">Select a location...</option>
+              {locations?.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </label>
           <label>Purchase Price (₹)<input className="input" type="number" value={form.purchasePrice} onChange={e => setForm({...form, purchasePrice: e.target.value})} placeholder="85000" /></label>
           <label>Purchase Date<input className="input" type="date" value={form.purchaseDate} onChange={e => setForm({...form, purchaseDate: e.target.value})} /></label>
           <div className="modal-actions">
@@ -58,24 +77,31 @@ function AddAssetModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 }
 
 export default function InventoryPage() {
-  const [assets, setAssets] = useState<Asset[]>(getAssets());
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [showAdd, setShowAdd] = useState(false);
 
-  const refresh = () => setAssets(getAssets());
+  // Debounce search
+  React.useEffect(() => {
+    const timer = setTimeout(() => { setDebouncedSearch(searchQuery); setPage(1); }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const filteredData = assets.filter(asset =>
-    asset.modelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    asset.tagId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    asset.type.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { data, error, mutate } = useSWR(`/assets?page=${page}&limit=12${debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : ''}`, url => apiFetch(url));
+
+  const assets = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / 12) || 1;
+
+  if (error) return <div style={{ padding: 40, color: 'red' }}>Failed to load inventory.</div>;
 
   return (
     <div className="inventory-container">
       <header className="inventory-header">
         <div>
           <h1 className="page-title">Asset Inventory</h1>
-          <p className="page-subtitle">{assets.length} assets registered in the system.</p>
+          <p className="page-subtitle">{total} assets registered in the system.</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
           <Plus size={16} /> Register Asset
@@ -86,67 +112,69 @@ export default function InventoryPage() {
         <Search size={16} className="search-icon" />
         <input
           type="text"
-          placeholder="Search by name, tag, or type..."
+          placeholder="Search by name or tag..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
         />
       </div>
 
-      <div className="asset-grid">
-        {filteredData.map(asset => (
-          <div key={asset.id} className="asset-card glass">
-            <div className="asset-header">
-              <div>
-                <div className="asset-name">{asset.modelName}</div>
-                <span className="asset-tag">{asset.tagId}</span>
+      {!data ? (
+        <div>Loading...</div>
+      ) : (
+        <>
+          <div className="asset-grid">
+            {assets.map((asset: any) => (
+              <div key={asset.id} className="asset-card glass">
+                <div className="asset-header">
+                  <div>
+                    <div className="asset-name">{asset.modelName}</div>
+                    <span className="asset-tag">{asset.tagId}</span>
+                  </div>
+                  <span className="asset-type-badge">{asset.type.name}</span>
+                </div>
+                <div className="asset-meta-grid">
+                  <div className="meta-item">
+                    <span className="meta-label">Location</span>
+                    <span className="meta-value">{asset.location.name}</span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-label">Purchase Price</span>
+                    <span className="meta-value">₹{asset.purchasePrice.toLocaleString()}</span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-label">Status</span>
+                    <span className="meta-value" style={{ color: STATUS_COLORS[asset.status] || '#fff' }}>
+                      ● {asset.status}
+                    </span>
+                  </div>
+                </div>
+                <div className="asset-actions">
+                  <Link href={`/inventory/${asset.id}`} className="btn btn-outline" style={{ gridColumn: 'span 2' }}>
+                    <Eye size={14} /> View Details & History
+                  </Link>
+                </div>
               </div>
-              <span className="asset-type-badge">{asset.type}</span>
-            </div>
-            <div className="asset-meta-grid">
-              <div className="meta-item">
-                <span className="meta-label">Location</span>
-                <span className="meta-value">{asset.location}</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Assigned To</span>
-                <span className="meta-value">{asset.assignedTo || '—'}</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Purchase Price</span>
-                <span className="meta-value">₹{asset.purchasePrice.toLocaleString()}</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Status</span>
-                <span className="meta-value" style={{ color: STATUS_COLORS[asset.status] }}>
-                  ● {asset.status}
-                </span>
-              </div>
-            </div>
-            <div className="asset-actions">
-              <Link href={`/inventory/${asset.id}`} className="btn btn-outline">
-                <Eye size={14} /> View Details
-              </Link>
-              <button
-                className="btn btn-primary"
-                disabled={asset.status !== 'ACTIVE'}
-                onClick={() => {
-                  const assignee = prompt('Assign to (name):');
-                  if (!assignee) return;
-                  updateAsset(asset.id, { assignedTo: assignee, status: 'ACTIVE' });
-                  refresh();
-                }}
-              >
-                <ChevronRight size={14} /> Assign
+            ))}
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button className="btn btn-outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                <ChevronLeft size={16} /> Prev
+              </button>
+              <span>Page {page} of {totalPages}</span>
+              <button className="btn btn-outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                Next <ChevronRight size={16} />
               </button>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+        </>
+      )}
 
       {showAdd && (
         <AddAssetModal
           onClose={() => setShowAdd(false)}
-          onSuccess={() => { setShowAdd(false); refresh(); }}
+          onSuccess={() => { setShowAdd(false); mutate(); }}
         />
       )}
 
@@ -171,8 +199,10 @@ export default function InventoryPage() {
         .asset-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.2s; }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: var(--accent-primary); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
         .btn-outline:hover { background: rgba(255,255,255,0.05); }
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary); }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .modal-card { padding: 32px; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
         .modal-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 20px; }

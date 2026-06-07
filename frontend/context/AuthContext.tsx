@@ -1,7 +1,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { setAuthToken, clearAuthToken } from '../lib/api';
+import { apiFetch, setAuthToken, clearAuthToken } from '../lib/api';
 
 interface User {
   id: string;
@@ -16,12 +16,6 @@ interface AuthContextType {
   login: (email: string) => Promise<void>;
   logout: () => void;
 }
-
-const MOCK_USERS: Record<string, User> = {
-  'admin@company.com': { id: 'mock-1', email: 'admin@company.com', fullName: 'Admin User', role: 'ADMIN' },
-  'manager@company.com': { id: 'mock-2', email: 'manager@company.com', fullName: 'Manager User', role: 'MANAGER' },
-  'user@company.com': { id: 'mock-3', email: 'user@company.com', fullName: 'Regular User', role: 'USER' },
-};
 
 const STORAGE_KEY = 'vaultiq_user';
 
@@ -42,25 +36,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         setUser(JSON.parse(stored));
+        // Retrieve token from cookie to set on apiFetch if we want it in memory too
+        const token = document.cookie.split('; ').find(row => row.startsWith('vaultiq_token='))?.split('=')[1];
+        if (token) setAuthToken(token);
       }
     } catch {}
     setLoading(false);
   }, []);
 
   const login = async (email: string) => {
-    const mockUser = MOCK_USERS[email.toLowerCase().trim()];
-    if (!mockUser) {
-      throw new Error('Unknown email. Try admin@company.com, manager@company.com, or user@company.com');
+    try {
+      const data = await apiFetch('/auth/dev-login', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      });
+      const { access_token, user: loggedInUser } = data;
+      setAuthToken(access_token);
+      document.cookie = `vaultiq_token=${access_token}; path=/; max-age=86400`;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedInUser));
+      setUser(loggedInUser);
+      router.push('/dashboard');
+    } catch (err: any) {
+      alert(err.message || 'Login failed');
     }
-    const mockToken = 'mock-token-' + Date.now();
-    setAuthToken(mockToken);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUser));
-    setUser(mockUser);
-    router.push('/dashboard');
   };
 
   const logout = () => {
     clearAuthToken();
+    document.cookie = 'vaultiq_token=; path=/; max-age=0';
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
     router.push('/login');

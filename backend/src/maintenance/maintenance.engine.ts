@@ -21,6 +21,26 @@ export class MaintenanceEngine {
     });
   }
 
+  async findAll() {
+    return this.prisma.maintenanceRecord.findMany({
+      include: { asset: { include: { type: true, location: true } } },
+      orderBy: { scheduledDate: 'desc' },
+    });
+  }
+
+  async createRecord(data: any) {
+    return this.prisma.maintenanceRecord.create({
+      data: {
+        assetId: data.assetId,
+        issueType: data.priority || 'MEDIUM', // mapping priority to issueType for now
+        description: data.issue,
+        scheduledDate: new Date(),
+        status: 'OPEN'
+      },
+      include: { asset: { include: { type: true, location: true } } }
+    });
+  }
+
   async updateRecord(id: string, status: string, technicianNotes?: string) {
     const record = await this.prisma.maintenanceRecord.findUnique({ where: { id } });
     if (!record) throw new NotFoundException('Maintenance record not found');

@@ -1,7 +1,10 @@
 'use client';
 import React from 'react';
 import { Laptop, RotateCcw, Wrench, Plus, CheckCircle, Archive, TrendingUp, Package, Users, AlertTriangle } from 'lucide-react';
-import { getDashboardSummary } from '../../lib/mockStore';
+import useSWR from 'swr';
+import { apiFetch } from '../../lib/api';
+
+const fetcher = (url: string) => apiFetch(url);
 
 function timeAgo(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
@@ -22,10 +25,13 @@ function activityIcon(type: string) {
 }
 
 export default function Dashboard() {
-  const summary = getDashboardSummary();
-  const { stats, recentActivities, assetsByType } = summary;
+  const { data: summary, error } = useSWR('/assets/summary', fetcher, { refreshInterval: 5000 });
 
-  const maxCount = Math.max(...assetsByType.map((x: any) => x.count), 1);
+  if (error) return <div style={{ padding: 40, color: 'red' }}>Failed to load dashboard</div>;
+  if (!summary) return <div style={{ padding: 40 }}>Loading...</div>;
+
+  const { stats, recentActivities, assetsByType } = summary;
+  const maxCount = Math.max(...(assetsByType || []).map((x: any) => x.count), 1);
 
   const cards = [
     { label: 'Total Assets', value: stats.total, status: 'primary', icon: <Package size={20} /> },

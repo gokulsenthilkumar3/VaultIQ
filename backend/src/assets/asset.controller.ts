@@ -15,13 +15,22 @@ export class AssetController {
   constructor(private assetService: AssetService) {}
 
   @Get()
-  async findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
-    return this.assetService.findAll(page ? Number(page) : 1, limit ? Number(limit) : 20);
+  async findAll(
+    @Query('page') page?: string, 
+    @Query('limit') limit?: string,
+    @Query('search') search?: string
+  ) {
+    return this.assetService.findAll(page ? Number(page) : 1, limit ? Number(limit) : 20, search);
   }
 
   @Get('summary')
   async getSummary() {
     return this.assetService.getSummary();
+  }
+
+  @Get('activity')
+  async getActivity() {
+    return this.assetService.getGlobalActivityLog();
   }
 
   @Get('types')
@@ -32,6 +41,20 @@ export class AssetController {
   @Get('locations')
   async getLocations() {
     return this.assetService.getLocations();
+  }
+
+  @Post('types')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'MANAGER')
+  async createType(@Body('name') name: string, @Body('lifespanYears') lifespanYears?: number) {
+    return this.assetService.createType(name, lifespanYears || 3);
+  }
+
+  @Post('locations')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'MANAGER')
+  async createLocation(@Body('name') name: string, @Body('address') address?: string) {
+    return this.assetService.createLocation(name, address || 'TBD');
   }
 
   @Get(':id/audit-hash')

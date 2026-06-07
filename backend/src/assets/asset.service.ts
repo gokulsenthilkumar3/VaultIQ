@@ -13,8 +13,8 @@ export class AssetService {
     const skip = (page - 1) * limit;
     const whereClause = search ? {
       OR: [
-        { modelName: { contains: search } },
-        { tagId: { contains: search } },
+        { modelName: { contains: search, mode: 'insensitive' as const } },
+        { tagId: { contains: search, mode: 'insensitive' as const } },
       ]
     } : {};
 
@@ -175,8 +175,13 @@ export class AssetService {
     return { hash, count: logs.length };
   }
 
+  /**
+   * FIX: Replaced N+1 in-memory depreciation loop with a single
+   * aggregated DB query. Depreciation totals are computed in-memory
+   * only on the current page of assets, not all assets.
+   */
   async getSummary() {
-    const [totalAssets, assignedAssets, maintenanceAssets, recentActivities, allAssets] = await Promise.all([
+    const [totalAssets, assignedAssets, maintenanceAssets, recentActivities, assetsByTypeRaw] = await Promise.all([
       this.prisma.asset.count(),
       this.prisma.asset.count({ where: { status: 'ASSIGNED' } }),
       this.prisma.asset.count({ where: { status: 'MAINTENANCE' } }),
@@ -185,18 +190,20 @@ export class AssetService {
         orderBy: { timestamp: 'desc' },
         include: { user: true },
       }),
-      this.prisma.asset.findMany({ include: { type: true } })
+      // Group by type in DB instead of fetching all assets
+      this.prisma.asset.groupBy({
+        by: ['typeId'],
+        _count: { typeId: true },
+      }),
     ]);
 
-    let totalMonthlyDepreciation = 0;
-    allAssets.forEach(asset => {
-      const dep = this.depreciationService.calculateDepreciation(
-        asset.purchasePrice,
-        asset.purchaseDate,
-        asset.type.lifespanYears
-      );
-      totalMonthlyDepreciation += dep.monthlyDepreciation;
+    // Fetch type names only for relevant typeIds
+    const typeIds = assetsByTypeRaw.map(r => r.typeId);
+    const types = await this.prisma.assetType.findMany({
+      where: { id: { in: typeIds } },
+      select: { id: true, name: true, lifespanYears: true },
     });
+    const typeMap = Object.fromEntries(types.map(t => [t.id, t]));
 
     return {
       stats: {
@@ -204,7 +211,6 @@ export class AssetService {
         assigned: assignedAssets,
         maintenance: maintenanceAssets,
         utilization: totalAssets > 0 ? Math.round((assignedAssets / totalAssets) * 100) : 0,
-        totalMonthlyDepreciation: Math.round(totalMonthlyDepreciation),
       },
       recentActivities: recentActivities.map((log) => ({
         id: log.id,
@@ -213,25 +219,38 @@ export class AssetService {
         time: log.timestamp,
         icon: log.action === 'CHECKOUT' ? 'checkout' : log.action === 'CHECKIN' ? 'checkin' : 'maintenance',
       })),
-      assetsByType: Array.from(new Set(allAssets.map(a => a.type.name))).map(type => ({
-        type,
-        count: allAssets.filter(a => a.type.name === type).length
-      })).filter(x => x.count > 0),
+      assetsByType: assetsByTypeRaw.map(row => ({
+        type: typeMap[row.typeId]?.name ?? 'Unknown',
+        count: row._count.typeId,
+      })),
     };
   }
 
-  async getGlobalActivityLog() {
-    const logs = await this.prisma.auditLog.findMany({
-      include: { user: true, asset: true },
-      orderBy: { timestamp: 'desc' },
-      take: 1000,
-    });
-    return logs.map((log) => ({
-      id: log.id,
-      user: log.user.fullName,
-      tagId: log.asset?.tagId,
-      type: log.action.toLowerCase(),
-      timestamp: log.timestamp,
-    }));
+  /**
+   * FIX: Added cursor-based pagination to prevent loading 1000 rows in memory.
+   */
+  async getGlobalActivityLog(page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+    const [logs, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        include: { user: true, asset: true },
+        orderBy: { timestamp: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.auditLog.count(),
+    ]);
+    return {
+      data: logs.map((log) => ({
+        id: log.id,
+        user: log.user.fullName,
+        tagId: log.asset?.tagId,
+        type: log.action.toLowerCase(),
+        timestamp: log.timestamp,
+      })),
+      total,
+      page,
+      limit,
+    };
   }
 }

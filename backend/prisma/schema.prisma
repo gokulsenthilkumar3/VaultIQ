@@ -7,6 +7,19 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+// NOTE: SQLite does not natively support enum types.
+// These are represented as String columns with application-level validation.
+// When migrating to PostgreSQL, convert these to proper Prisma enum types.
+
+// UserRole    : ADMIN | MANAGER | USER
+// AssetStatus : AVAILABLE | ASSIGNED | MAINTENANCE | RETIRED
+// MaintenanceStatus: OPEN | IN_PROGRESS | COMPLETED | CANCELLED
+// MaintenancePriority: LOW | MEDIUM | HIGH | CRITICAL
+
 model User {
   id               String            @id @default(uuid())
   email            String            @unique
@@ -32,7 +45,7 @@ model Asset {
   purchaseDate     DateTime
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  
+
   type             AssetType         @relation(fields: [typeId], references: [id])
   location         Location          @relation(fields: [locationId], references: [id])
   assignments      AssetAssignment[]
@@ -49,22 +62,25 @@ model AssetAssignment {
   returnedAt       DateTime?
   signatureBlob    String?   // Base64 or URL
   conditionNotes   String?
-  
+
   asset            Asset     @relation(fields: [assetId], references: [id])
   user             User      @relation(fields: [userId], references: [id])
 }
 
 model MaintenanceRecord {
-  id               String            @id @default(uuid())
+  id               String    @id @default(uuid())
   assetId          String
   issueType        String
   description      String
-  status           String            @default("OPEN")
+  // priority is a first-class field (LOW | MEDIUM | HIGH | CRITICAL).
+  // Replaces the previous workaround of embedding priority in technicianNotes.
+  priority         String    @default("MEDIUM")
+  status           String    @default("OPEN")
   scheduledDate    DateTime
   completedAt      DateTime?
   technicianNotes  String?
-  
-  asset            Asset             @relation(fields: [assetId], references: [id])
+
+  asset            Asset     @relation(fields: [assetId], references: [id])
 }
 
 model AssetType {
@@ -82,15 +98,15 @@ model Location {
 }
 
 model AuditLog {
-  id               String    @id @default(uuid())
-  action           String
-  assetId          String?
-  userId           String
-  details          String
-  timestamp        DateTime  @default(now())
-  blockHash        String?
+  id                String    @id @default(uuid())
+  action            String
+  assetId           String?
+  userId            String
+  details           String
+  timestamp         DateTime  @default(now())
+  blockHash         String?
   previousBlockHash String?
-  
+
   user             User      @relation(fields: [userId], references: [id])
   asset            Asset?    @relation(fields: [assetId], references: [id])
 }
@@ -108,4 +124,18 @@ model HelpdeskTicket {
 
   user             User      @relation(fields: [userId], references: [id])
   asset            Asset?    @relation(fields: [assetId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// RefreshToken — persisted for server-side revocation (rotation security)
+// ---------------------------------------------------------------------------
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String
+  tokenHash   String   @unique  // SHA-256 hash of the raw refresh token
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  revoked     Boolean  @default(false)
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

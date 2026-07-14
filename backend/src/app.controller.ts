@@ -1,14 +1,23 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+@ApiTags('Health')
 @Controller()
 export class AppController {
-  @Get()
-  getHello(): string {
-    return 'VaultIQ Core API - System Operational';
+  @Get('health')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Health check endpoint for Render / load balancer' })
+  health() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: 'vaultiq-backend',
+    };
   }
 
-  @Get('health')
-  getHealth() {
-    return { status: 'OK', timestamp: new Date().toISOString() };
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  root() {
+    return { message: 'VaultIQ API is running. See /api/docs for documentation.' };
   }
 }

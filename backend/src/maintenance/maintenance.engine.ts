@@ -21,7 +21,11 @@ export class MaintenanceEngine {
     return this.prisma.maintenanceRecord.findMany({
       where: { status: { in: [MaintenanceStatus.OPEN, MaintenanceStatus.IN_PROGRESS] } },
       include: { asset: { include: { type: true, location: true } } },
-      orderBy: { scheduledDate: 'asc' },
+      orderBy: [
+        // Sort CRITICAL first, then by scheduled date
+        { priority: 'asc' },
+        { scheduledDate: 'asc' },
+      ],
     });
   }
 
@@ -38,11 +42,10 @@ export class MaintenanceEngine {
         assetId: dto.assetId,
         issueType: dto.issueType,
         description: dto.description,
+        // priority is now a proper DB column, not a string hack in technicianNotes
+        priority: dto.priority ?? MaintenancePriority.MEDIUM,
         scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : new Date(),
         status: MaintenanceStatus.OPEN,
-        // Store priority in technicianNotes until schema adds a priority column
-        // TODO: add `priority` field to MaintenanceRecord model in schema.prisma
-        technicianNotes: dto.priority ? `Priority: ${dto.priority}` : undefined,
       },
       include: { asset: { include: { type: true, location: true } } },
     });
@@ -112,8 +115,8 @@ export class MaintenanceEngine {
       [MaintenanceStatus.OPEN, MaintenanceStatus.IN_PROGRESS].includes(r.status as MaintenanceStatus),
     );
 
-    // Calculate health score: base 100, deduct for each maintenance event
-    // Recent events (last 90 days) weigh heavier
+    // Calculate health score: base 100, deduct for each maintenance event.
+    // Recent events (last 90 days) weigh heavier.
     const now = Date.now();
     const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
     let healthScore = 100;
@@ -123,7 +126,7 @@ export class MaintenanceEngine {
     }
     healthScore = Math.max(0, Math.min(100, healthScore));
 
-    // Predict next scheduled date based on average interval between past maintenance
+    // Predict next scheduled date based on average interval between past maintenance.
     let nextScheduledDate: string;
     if (completedRecords.length >= 2) {
       const intervals: number[] = [];
@@ -134,8 +137,7 @@ export class MaintenanceEngine {
         intervals.push(Math.abs(diff));
       }
       const avgIntervalMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const next = new Date(now + avgIntervalMs);
-      nextScheduledDate = next.toISOString();
+      nextScheduledDate = new Date(now + avgIntervalMs).toISOString();
     } else {
       // Default: schedule 30 days out if no history
       const next = new Date();
@@ -143,7 +145,7 @@ export class MaintenanceEngine {
       nextScheduledDate = next.toISOString();
     }
 
-    // Derive predicted issues from issue types in recent history
+    // Derive predicted issues from issue types in recent history.
     const recentIssueTypes = completedRecords
       .filter((r) => now - new Date(r.scheduledDate).getTime() < ninetyDaysMs)
       .map((r) => r.issueType);

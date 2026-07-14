@@ -12,12 +12,24 @@ export class UserService {
         fullName: true,
         email: true,
         role: true,
+        department: true,
+        employeeId: true,
+        hireDate: true,
+        performanceRating: true,
       },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async create(data: { email: string; fullName: string; role: string }) {
+  async create(data: { 
+    email: string; 
+    fullName: string; 
+    role: string;
+    department?: string;
+    employeeId?: string;
+    hireDate?: string;
+    performanceRating?: number;
+  }) {
     return this.prisma.user.create({
       data: {
         ...data,
@@ -28,6 +40,10 @@ export class UserService {
         fullName: true,
         email: true,
         role: true,
+        department: true,
+        employeeId: true,
+        hireDate: true,
+        performanceRating: true,
       },
     });
   }

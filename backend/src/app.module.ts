@@ -11,6 +11,10 @@ import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ReportsModule } from './reports/reports.module';
+import { HrModule } from './hr/hr.module';
+import { FacilitiesModule } from './facilities/facilities.module';
+import { ProcurementModule } from './procurement/procurement.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -28,6 +32,10 @@ import { ReportsModule } from './reports/reports.module';
     AuthModule,
     UsersModule,
     ReportsModule,
+    HrModule,
+    FacilitiesModule,
+    ProcurementModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

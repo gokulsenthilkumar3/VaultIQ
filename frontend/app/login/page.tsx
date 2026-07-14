@@ -123,7 +123,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .login-page {
           min-height: 100vh;
           display: grid;
@@ -286,7 +286,7 @@ export default function LoginPage() {
         .demo-pill:hover { opacity: 0.75; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      `}} />
     </div>
   );
 }

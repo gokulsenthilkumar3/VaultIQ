@@ -13,16 +13,45 @@ import {
   Triangle,
   GitFork,
   Users,
+  Headset,
+  Building,
+  ShoppingCart,
+  LineChart,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { href: '/inventory', label: 'Inventory', icon: <Package size={18} /> },
-  { href: '/scanner', label: 'Scanner', icon: <ScanQrCode size={18} /> },
-  { href: '/graph', label: 'Graph', icon: <GitFork size={18} /> },
-  { href: '/users', label: 'Personnel', icon: <Users size={18} /> },
-  { href: '/maintenance', label: 'Maintenance', icon: <Wrench size={18} /> },
-  { href: '/reports', label: 'Reports', icon: <ClipboardList size={18} /> },
+const NAV_GROUPS = [
+  {
+    label: 'Overview',
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    ]
+  },
+  {
+    label: 'Assets',
+    items: [
+      { href: '/inventory', label: 'Inventory', icon: <Package size={18} /> },
+      { href: '/scanner', label: 'Scanner', icon: <ScanQrCode size={18} /> },
+      { href: '/graph', label: 'Graph', icon: <GitFork size={18} /> },
+    ]
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: '/hr', label: 'HR Management', icon: <Users size={18} /> },
+      { href: '/facilities', label: 'Facilities', icon: <Building size={18} /> },
+      { href: '/helpdesk', label: 'IT Helpdesk', icon: <Headset size={18} /> },
+      { href: '/maintenance', label: 'Maintenance', icon: <Wrench size={18} /> },
+    ]
+  },
+  {
+    label: 'Administration',
+    roles: ['ADMIN', 'MANAGER'],
+    items: [
+      { href: '/procurement', label: 'Procurement', icon: <ShoppingCart size={18} />, roles: ['ADMIN', 'MANAGER'] },
+      { href: '/analytics', label: 'Analytics', icon: <LineChart size={18} />, roles: ['ADMIN', 'MANAGER'] },
+      { href: '/reports', label: 'Reports', icon: <ClipboardList size={18} />, roles: ['ADMIN', 'MANAGER'] },
+    ]
+  }
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {
@@ -65,21 +94,28 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <span>VaultIQ</span>
           </div>
 
-          <ul className="nav-menu">
-            {NAV_ITEMS.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`nav-item ${
-                    normalizedPath === item.href ? 'active' : ''
-                  }`}
-                >
-                  <span className="nav-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              </li>
+          <div className="nav-menu" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {NAV_GROUPS.filter(group => !group.roles || group.roles.includes(user.role)).map((group) => (
+              <div key={group.label} className="nav-group">
+                <div className="nav-group-title">{group.label}</div>
+                <ul>
+                  {group.items.filter(item => !item.roles || item.roles.includes(user.role)).map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={`nav-item ${
+                          normalizedPath === item.href ? 'active' : ''
+                        }`}
+                      >
+                        <span className="nav-icon">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
 
           <div className="user-profile">
             <div className="user-profile-main">
@@ -101,8 +137,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       </div>
 
       <style>{`
-        ul.nav-menu { list-style: none; padding: 0; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 8px; text-decoration: none; color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; transition: all 0.2s ease; }
+        .nav-menu { padding: 0; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; overflow-x: hidden; }
+        .nav-group ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+        .nav-group-title { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; padding-left: 14px; letter-spacing: 0.05em; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; text-decoration: none; color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; transition: all 0.2s ease; }
         .nav-item:hover { background: rgba(88,166,255,0.08); color: var(--text-primary); }
         .nav-item.active { background: rgba(88,166,255,0.12); color: var(--accent-primary); font-weight: 600; }
         .nav-icon { display: flex; align-items: center; flex-shrink: 0; }

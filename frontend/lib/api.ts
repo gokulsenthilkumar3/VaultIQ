@@ -24,6 +24,15 @@ export async function apiFetch<T = any>(
     clearTimeout(timer);
 
     if (!res.ok) {
+      if (res.status === 401 && typeof window !== 'undefined') {
+        // Token expired or invalid backend secret - force logout
+        delete (window as any).__vaultiq_token;
+        document.cookie = 'vaultiq_token=; path=/; max-age=0';
+        localStorage.removeItem('vaultiq_user');
+        window.location.href = '/login';
+        return undefined as T;
+      }
+
       let errMsg = `API Error ${res.status}: ${res.statusText}`;
       try {
         const body = await res.json();

@@ -5,6 +5,7 @@ import { apiFetch } from '../../lib/api';
 import { Plus, Search, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import CheckoutModal from '../../components/CheckoutModal';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: '#3fb950',
@@ -83,6 +84,7 @@ export default function InventoryPage() {
   const [page, setPage] = useState(1);
   const [showAdd, setShowAdd] = useState(false);
   const [checkoutAsset, setCheckoutAsset] = useState<any>(null);
+  const { user } = useAuth();
 
   // Debounce search
   React.useEffect(() => {
@@ -105,9 +107,11 @@ export default function InventoryPage() {
           <h1 className="page-title">Asset Inventory</h1>
           <p className="page-subtitle">{total} assets registered in the system.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          <Plus size={16} /> Register Asset
-        </button>
+        {user && (user.role === 'ADMIN' || user.role === 'MANAGER') && (
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            <Plus size={16} /> Register Asset
+          </button>
+        )}
       </header>
 
       <div className="search-bar glass">
@@ -151,10 +155,10 @@ export default function InventoryPage() {
                   </div>
                 </div>
                 <div className="asset-actions">
-                  <Link href={`/inventory/${asset.id}`} className="btn btn-outline" style={{ gridColumn: asset.status === 'ACTIVE' ? 'span 1' : 'span 2' }}>
+                  <Link href={`/inventory/${asset.id}`} className="btn btn-outline" style={{ gridColumn: asset.status === 'ACTIVE' && user && (user.role === 'ADMIN' || user.role === 'MANAGER') ? 'span 1' : 'span 2' }}>
                     <Eye size={14} /> View Details & History
                   </Link>
-                  {asset.status === 'ACTIVE' && (
+                  {asset.status === 'ACTIVE' && user && (user.role === 'ADMIN' || user.role === 'MANAGER') && (
                     <button className="btn btn-primary" onClick={() => setCheckoutAsset(asset)}>
                       Assign
                     </button>
@@ -202,7 +206,8 @@ export default function InventoryPage() {
         .search-icon { color: var(--text-secondary); flex-shrink: 0; }
         .search-bar input { background: transparent; border: none; color: var(--text-primary); outline: none; font-size: 0.9rem; width: 100%; }
         .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-        .asset-card { padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px; }
+        .asset-card { padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+        .asset-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
         .asset-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .asset-name { font-size: 1.1rem; font-weight: 700; }
         .asset-tag { font-size: 0.7rem; font-family: monospace; background: rgba(88,166,255,0.1); color: var(--accent-primary); padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }

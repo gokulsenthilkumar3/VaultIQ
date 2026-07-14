@@ -247,7 +247,7 @@ export default function GraphPage() {
       type: a.type.name,
       location: a.location.name,
     }));
-    const activity = activityData;
+    const activity = Array.isArray(activityData) ? activityData : (activityData?.data || []);
     
     const { nodes: n, edges: e } = buildGraph(assets, activity, W, H);
     setEdges(e);

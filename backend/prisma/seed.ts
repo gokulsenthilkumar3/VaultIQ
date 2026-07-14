@@ -122,6 +122,39 @@ async function main() {
     }
   });
 
+  // 7. Create HR Records
+  await prisma.companyUpdate.createMany({
+    data: [
+      { title: 'Q3 Townhall Meeting Scheduled', content: 'Join us on Friday at 3 PM EST for the quarterly company all-hands meeting. We will discuss our Q3 growth and Q4 roadmap.', date: new Date('2026-10-12'), author: 'HR Communications', type: 'announcement' },
+      { title: 'New Health Insurance Benefits', content: 'We have updated our premium health plan to include dental and vision with no extra co-pay. Check the portal for details.', date: new Date('2026-10-10'), author: 'Jane Smith (HR)', type: 'update' },
+      { title: 'Office Renovation Complete', content: 'The 4th floor renovation is finally done. Feel free to use the new collaboration spaces starting Monday.', date: new Date('2026-10-05'), author: 'Facilities Team', type: 'news' }
+    ]
+  });
+
+  await prisma.leaveRequest.createMany({
+    data: [
+      { userId: staff.id, type: 'Annual Leave', startDate: new Date('2026-09-01'), endDate: new Date('2026-09-05'), days: 5, status: 'APPROVED' },
+      { userId: staff.id, type: 'Sick Leave', startDate: new Date('2026-08-15'), endDate: new Date('2026-08-15'), days: 1, status: 'APPROVED' },
+      { userId: staff.id, type: 'Outdoor Duty', startDate: new Date('2026-10-20'), endDate: new Date('2026-10-22'), days: 3, status: 'PENDING' },
+    ]
+  });
+
+  await prisma.payslip.createMany({
+    data: [
+      { userId: staff.id, period: 'September 2026', amount: '$5,240.00', status: 'PAID', date: new Date('2026-09-30') },
+      { userId: staff.id, period: 'August 2026', amount: '$5,240.00', status: 'PAID', date: new Date('2026-08-31') },
+      { userId: staff.id, period: 'July 2026', amount: '$5,240.00', status: 'PAID', date: new Date('2026-07-31') },
+    ]
+  });
+
+  await prisma.quote.createMany({
+    data: [
+      { content: '"The strength of the team is each individual member. The strength of each member is the team." – Phil Jackson' },
+      { content: '"Success is not final, failure is not fatal: it is the courage to continue that counts." – Winston Churchill' },
+      { content: '"Alone we can do so little; together we can do so much." – Helen Keller' }
+    ]
+  });
+
   console.log('✅ Seeding completed successfully.');
 }
 

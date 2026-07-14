@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import useSWR from 'swr';
 import { apiFetch } from '../../lib/api';
 import { Wrench, AlertTriangle, CheckCircle, Clock, Plus, X } from 'lucide-react';
+import PremiumSelect from '../../components/PremiumSelect';
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: '#8b949e',
@@ -52,18 +53,30 @@ function NewTicketModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
         {error && <div className="error-banner">{error}</div>}
         <form onSubmit={handleSubmit} className="modal-form">
           <label>Asset
-            <select className="input" value={assetId} onChange={e => setAssetId(e.target.value)}>
-              <option value="">Select an asset...</option>
-              {assets.map((a: any) => <option key={a.id} value={a.id}>{a.modelName} ({a.tagId})</option>)}
-            </select>
+            <PremiumSelect
+              value={assetId}
+              onChange={val => setAssetId(val)}
+              options={assets.map((a: any) => ({
+                value: a.id,
+                label: `${a.modelName} (${a.tagId})`
+              }))}
+              placeholder="Select an asset..."
+            />
           </label>
           <label>Issue Description
             <textarea className="input" rows={3} value={issue} onChange={e => setIssue(e.target.value)} placeholder="Describe the problem..." />
           </label>
           <label>Priority
-            <select className="input" value={priority} onChange={e => setPriority(e.target.value)}>
-              {(['LOW','MEDIUM','HIGH','CRITICAL'] as const).map(p => <option key={p}>{p}</option>)}
-            </select>
+            <PremiumSelect
+              value={priority}
+              onChange={val => setPriority(val)}
+              options={[
+                { value: 'LOW', label: 'LOW' },
+                { value: 'MEDIUM', label: 'MEDIUM' },
+                { value: 'HIGH', label: 'HIGH' },
+                { value: 'CRITICAL', label: 'CRITICAL' }
+              ]}
+            />
           </label>
           <div className="modal-actions">
             <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>

@@ -19,7 +19,20 @@ import {
   LineChart,
 } from 'lucide-react';
 
-const NAV_GROUPS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: JSX.Element;
+  roles?: string[];
+};
+
+type NavGroup = {
+  label: string;
+  roles?: string[];
+  items: NavItem[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
     items: [

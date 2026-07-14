@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { apiFetch } from '../lib/api';
+import PremiumSelect from './PremiumSelect';
 
 interface ManageMaintenanceModalProps {
   item: any;
@@ -53,16 +54,15 @@ export default function ManageMaintenanceModal({ item, onClose, onSuccess }: Man
 
           <div className="input-group">
             <label htmlFor="status-select">Status</label>
-            <select
-              id="status-select"
+            <PremiumSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="glass"
-            >
-              <option value="PENDING">Pending</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="RESOLVED">Resolved</option>
-            </select>
+              onChange={val => setStatus(val)}
+              options={[
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'IN_PROGRESS', label: 'In Progress' },
+                { value: 'RESOLVED', label: 'Resolved' }
+              ]}
+            />
           </div>
 
           <div className="input-group">

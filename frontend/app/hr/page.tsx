@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import { apiFetch } from '../../lib/api';
 import { Plus, Search, User, Clock, Calendar, CheckCircle, FileText, Download, Target, Briefcase } from 'lucide-react';
 import PremiumDatePicker from '../../components/PremiumDatePicker';
+import PremiumSelect from '../../components/PremiumSelect';
 import { useAuth } from '../../context/AuthContext';
 
 // Reuse AddUserModal
@@ -47,11 +48,15 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
             <input className="input" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="jane.doe@example.com" required />
           </label>
           <label>Role
-            <select className="input" value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-              <option value="USER">General Staff</option>
-              <option value="MANAGER">Manager</option>
-              <option value="ADMIN">Administrator</option>
-            </select>
+            <PremiumSelect 
+              value={form.role} 
+              onChange={val => setForm({...form, role: val})} 
+              options={[
+                { value: 'USER', label: 'General Staff' },
+                { value: 'MANAGER', label: 'Manager' },
+                { value: 'ADMIN', label: 'Administrator' }
+              ]}
+            />
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <label>Department
@@ -256,12 +261,17 @@ export default function HRPage() {
           <form className="leave-form" onSubmit={handleLeaveSubmit}>
             <div className="split-input">
               <label>Type
-                <select className="input" name="type" required>
-                  <option value="Annual Leave">Annual Leave</option>
-                  <option value="Sick Leave">Sick Leave</option>
-                  <option value="Outdoor Duty">Outdoor Duty</option>
-                  <option value="Overtime Request">Overtime Request</option>
-                </select>
+                <PremiumSelect
+                  name="type"
+                  value="Annual Leave"
+                  options={[
+                    { value: 'Annual Leave', label: 'Annual Leave' },
+                    { value: 'Sick Leave', label: 'Sick Leave' },
+                    { value: 'Outdoor Duty', label: 'Outdoor Duty' },
+                    { value: 'Overtime Request', label: 'Overtime Request' }
+                  ]}
+                  required
+                />
               </label>
               <label>Start Date <PremiumDatePicker name="startDate" required /></label>
               <label>End Date <PremiumDatePicker name="endDate" required /></label>

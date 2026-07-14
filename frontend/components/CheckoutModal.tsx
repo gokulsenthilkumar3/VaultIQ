@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import PremiumSelect from './PremiumSelect';
 import useSWR from 'swr';
 import { apiFetch } from '../lib/api';
 
@@ -52,18 +53,15 @@ export default function CheckoutModal({ asset, onClose, onSuccess }: CheckoutMod
           
           <div className="input-group">
             <label htmlFor="personnel-select">Select Personnel</label>
-            <select 
-              id="personnel-select"
-              aria-label="Select employee for asset assignment"
+            <PremiumSelect 
               value={selectedUserId} 
-              onChange={e => setSelectedUserId(e.target.value)}
-              className="glass"
-            >
-              <option value="">Choose an employee...</option>
-              {Array.isArray(users) && users.map((user: any) => (
-                <option key={user.id} value={user.id}>{user.fullName} ({user.email})</option>
-              ))}
-            </select>
+              onChange={val => setSelectedUserId(val)}
+              options={Array.isArray(users) ? users.map((user: any) => ({
+                value: user.id,
+                label: `${user.fullName} (${user.email})`
+              })) : []}
+              placeholder="Choose an employee..."
+            />
           </div>
 
           <div className="input-group">

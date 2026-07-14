@@ -5,6 +5,8 @@ import { apiFetch } from '../../lib/api';
 import { Plus, Search, Eye, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import CheckoutModal from '../../components/CheckoutModal';
+import PremiumSelect from '../../components/PremiumSelect';
+import PremiumDatePicker from '../../components/PremiumDatePicker';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -55,19 +57,28 @@ function AddAssetModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           <label>Serial Number<input className="input" value={form.serialNumber} onChange={e => setForm({...form, serialNumber: e.target.value})} placeholder="SN-XXXX" /></label>
           <label>Tag ID<input className="input" value={form.tagId} onChange={e => setForm({...form, tagId: e.target.value})} placeholder="VIQ-XXX" /></label>
           <label>Type
-            <select className="input" value={form.typeId} onChange={e => setForm({...form, typeId: e.target.value})}>
-              <option value="">Select a type...</option>
-              {types?.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <PremiumSelect 
+              value={form.typeId} 
+              onChange={val => setForm({...form, typeId: val})} 
+              options={types?.map((t: any) => ({ value: t.id, label: t.name })) || []}
+              placeholder="Select a type..." 
+            />
           </label>
           <label>Location
-            <select className="input" value={form.locationId} onChange={e => setForm({...form, locationId: e.target.value})}>
-              <option value="">Select a location...</option>
-              {locations?.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
+            <PremiumSelect 
+              value={form.locationId} 
+              onChange={val => setForm({...form, locationId: val})} 
+              options={locations?.map((l: any) => ({ value: l.id, label: l.name })) || []}
+              placeholder="Select a location..." 
+            />
           </label>
           <label>Purchase Price (₹)<input className="input" type="number" value={form.purchasePrice} onChange={e => setForm({...form, purchasePrice: e.target.value})} placeholder="85000" /></label>
-          <label>Purchase Date<input className="input" type="date" value={form.purchaseDate} onChange={e => setForm({...form, purchaseDate: e.target.value})} /></label>
+          <label>Purchase Date
+            <PremiumDatePicker 
+              value={form.purchaseDate} 
+              onChange={val => setForm({...form, purchaseDate: val})} 
+            />
+          </label>
           <div className="modal-actions">
             <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary">Register Asset</button>

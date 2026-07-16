@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -33,6 +34,7 @@ export class UserService {
     return this.prisma.user.create({
       data: {
         ...data,
+        role: data.role as UserRole,
         azureId: `local-auth-${Date.now()}`,
       },
       select: {

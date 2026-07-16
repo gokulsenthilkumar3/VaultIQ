@@ -17,11 +17,14 @@ import {
   Building,
   ShoppingCart,
   LineChart,
+  Menu,
+  X,
 } from 'lucide-react';
 
 type NavItem = {
   href: string;
   label: string;
+  purpose?: string;
   icon: JSX.Element;
   roles?: string[];
 };
@@ -34,35 +37,35 @@ type NavGroup = {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Overview',
+    label: 'Workspace',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-    ]
-  },
-  {
-    label: 'Assets',
-    items: [
-      { href: '/inventory', label: 'Inventory', icon: <Package size={18} /> },
-      { href: '/scanner', label: 'Scanner', icon: <ScanQrCode size={18} /> },
-      { href: '/graph', label: 'Graph', icon: <GitFork size={18} /> },
+      { href: '/dashboard', label: 'Mission Control', purpose: 'Monitor operations', icon: <LayoutDashboard size={18} /> },
+      { href: '/inventory', label: 'Inventory Directory', purpose: 'Manage assets', icon: <Package size={18} /> },
+      { href: '/scanner', label: 'Quick Scan', purpose: 'Audit via QR', icon: <ScanQrCode size={18} /> },
+      { href: '/graph', label: 'Dependency Map', purpose: 'View network topology', icon: <GitFork size={18} /> },
     ]
   },
   {
     label: 'Operations',
     items: [
-      { href: '/hr', label: 'HR Management', icon: <Users size={18} /> },
-      { href: '/facilities', label: 'Facilities', icon: <Building size={18} /> },
-      { href: '/helpdesk', label: 'IT Helpdesk', icon: <Headset size={18} /> },
-      { href: '/maintenance', label: 'Maintenance', icon: <Wrench size={18} /> },
+      { href: '/maintenance', label: 'Operations Center', purpose: 'Hardware repair', icon: <Wrench size={18} /> },
+      { href: '/helpdesk', label: 'Support Center', purpose: 'IT Helpdesk', icon: <Headset size={18} /> },
+      { href: '/procurement', label: 'AI Procurement', purpose: 'Order assets', icon: <ShoppingCart size={18} />, roles: ['ADMIN', 'MANAGER'] },
+    ]
+  },
+  {
+    label: 'Insights',
+    roles: ['ADMIN', 'MANAGER'],
+    items: [
+      { href: '/analytics', label: 'Executive Insights', purpose: 'Analytics & AI', icon: <LineChart size={18} />, roles: ['ADMIN', 'MANAGER'] },
+      { href: '/reports', label: 'Compliance Center', purpose: 'Ledger records', icon: <ClipboardList size={18} />, roles: ['ADMIN', 'MANAGER'] },
     ]
   },
   {
     label: 'Administration',
-    roles: ['ADMIN', 'MANAGER'],
     items: [
-      { href: '/procurement', label: 'Procurement', icon: <ShoppingCart size={18} />, roles: ['ADMIN', 'MANAGER'] },
-      { href: '/analytics', label: 'Analytics', icon: <LineChart size={18} />, roles: ['ADMIN', 'MANAGER'] },
-      { href: '/reports', label: 'Reports', icon: <ClipboardList size={18} />, roles: ['ADMIN', 'MANAGER'] },
+      { href: '/hr', label: 'Workforce', purpose: 'Manage employees', icon: <Users size={18} /> },
+      { href: '/facilities', label: 'Workspaces', purpose: 'Facilities layout', icon: <Building size={18} /> },
     ]
   }
 ];
@@ -71,16 +74,21 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const normalizedPath = '/' + (pathname.replace(/^\//, '').split('/')[0] || '');
 
   React.useEffect(() => {
-    if (!loading && !user && normalizedPath !== '/login') {
+    if (!loading && !user && normalizedPath !== '/login' && normalizedPath !== '/') {
       router.replace('/login');
     }
   }, [loading, user, normalizedPath, router]);
 
-  if (normalizedPath === '/login') return <>{children}</>;
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  if (normalizedPath === '/login' || normalizedPath === '/') return <>{children}</>;
 
   if (loading || !user) {
     return (
@@ -100,8 +108,28 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <header className="mobile-header">
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+        >
+          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        <div className="mobile-logo">
+          <Triangle size={20} fill="currentColor" />
+          <span>VaultIQ</span>
+        </div>
+        <div className="avatar-mobile">{initials}</div>
+      </header>
+
+      <div
+        className={`sidebar-overlay ${mobileOpen ? 'active' : ''}`}
+        onClick={() => setMobileOpen(false)}
+      />
+
       <div className="layout-wrapper">
-        <nav className="sidebar">
+        <nav className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
           <div className="logo">
             <Triangle size={22} fill="currentColor" />
             <span>VaultIQ</span>
@@ -121,7 +149,10 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                         }`}
                       >
                         <span className="nav-icon">{item.icon}</span>
-                        <span>{item.label}</span>
+                        <div className="nav-text">
+                          <span className="nav-label">{item.label}</span>
+                          {item.purpose && <span className="nav-purpose">{item.purpose}</span>}
+                        </div>
                       </Link>
                     </li>
                   ))}
@@ -156,7 +187,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; text-decoration: none; color: var(--text-secondary); font-weight: 500; font-size: 0.9rem; transition: all 0.2s ease; }
         .nav-item:hover { background: rgba(88,166,255,0.08); color: var(--text-primary); }
         .nav-item.active { background: rgba(88,166,255,0.12); color: var(--accent-primary); font-weight: 600; }
-        .nav-icon { display: flex; align-items: center; flex-shrink: 0; }
+        .nav-icon { display: flex; align-items: center; flex-shrink: 0; margin-top: 2px; align-self: flex-start; }
+        .nav-text { display: flex; flex-direction: column; gap: 2px; }
+        .nav-label { font-size: 0.9rem; font-weight: 500; }
+        .nav-purpose { font-size: 0.7rem; color: var(--text-muted); line-height: 1.1; font-weight: 400; }
+        .nav-item:hover .nav-purpose { color: rgba(255,255,255,0.6); }
+        .nav-item.active .nav-purpose { color: rgba(88,166,255,0.7); }
         .btn-logout { background: rgba(255,77,77,0.08); color: #ff7b78; border: 1px solid rgba(255,77,77,0.2); padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
         .btn-logout:hover { background: rgba(255,77,77,0.15); }
         .user-profile-main { display: flex; align-items: center; gap: 10px; }

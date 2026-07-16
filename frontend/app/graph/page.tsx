@@ -312,7 +312,7 @@ export default function GraphPage() {
 
   // ── Visibility filters ───────────────────────────────────────────────────
   const allAssets   = (assetsData?.data || []).map((a: any) => ({ ...a, type: a.type.name, location: a.location.name }));
-  const allActivity = activityData || [];
+  const allActivity = Array.isArray(activityData) ? activityData : (activityData?.data || []);
   const userCount   = nodes.filter(n => n.kind === 'user').length;
   const assetCount  = nodes.filter(n => n.kind === 'asset').length;
 

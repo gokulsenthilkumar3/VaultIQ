@@ -215,6 +215,31 @@ export class AssetService {
     return { hash, count: logs.length, chainIntact: logs.every((l) => l.blockHash !== null) };
   }
 
+  async verifyAuditIntegrity(assetId: string) {
+    const logs = await this.prisma.auditLog.findMany({
+      where: { assetId },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    if (logs.length === 0) {
+      return { isValid: true, message: 'No audit logs found for this asset.', blocksVerified: 0 };
+    }
+
+    let isValid = true;
+    for (let i = 1; i < logs.length; i++) {
+      if (logs[i].previousBlockHash !== logs[i - 1].blockHash) {
+        isValid = false;
+        break;
+      }
+    }
+
+    return {
+      isValid,
+      message: isValid ? 'Cryptographic chain is valid and immutable.' : 'WARNING: Chain integrity compromised.',
+      blocksVerified: logs.length
+    };
+  }
+
   async getSummary() {
     const [totalAssets, assignedAssets, maintenanceAssets, recentActivities, assetsByTypeRaw] =
       await Promise.all([

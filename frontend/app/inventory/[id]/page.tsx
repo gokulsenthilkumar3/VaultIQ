@@ -5,12 +5,25 @@ import { useParams, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { apiFetch } from '../../../lib/api';
 import DigitalTwin from '../../../components/DigitalTwin';
-import { ArrowLeft, Edit, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Edit, AlertCircle, CheckCircle, ShieldCheck } from 'lucide-react';
 
 export default function AssetDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const [verification, setVerification] = React.useState<any>(null);
+  const [isVerifying, setIsVerifying] = React.useState(false);
+
+  const verifyAudit = async () => {
+    setIsVerifying(true);
+    try {
+      const res = await apiFetch(`/assets/${id}/verify-audit`);
+      setVerification(res);
+    } catch (e) {
+      setVerification({ isValid: false, message: 'Failed to verify chain' });
+    }
+    setIsVerifying(false);
+  };
 
   const { data: asset, error } = useSWR<any>(`/assets/${id}`, apiFetch);
 
@@ -44,6 +57,9 @@ export default function AssetDetailPage() {
           <ArrowLeft size={18} /> Back to Inventory
         </button>
         <div className="header-actions">
+          <button className="btn btn-outline" onClick={verifyAudit} disabled={isVerifying}>
+            <ShieldCheck size={16} /> {isVerifying ? 'Verifying...' : 'Verify Audit Trail'}
+          </button>
           <button className="btn btn-outline"><Edit size={16} /> Edit Asset</button>
         </div>
       </header>
@@ -67,6 +83,14 @@ export default function AssetDetailPage() {
           <div className="info-card glass">
             <h2>{asset.modelName}</h2>
             <p className="serial-number">SN: {asset.serialNumber}</p>
+            
+            {verification && (
+              <div className="verification-alert" style={{ background: verification.isValid ? 'rgba(63, 185, 80, 0.1)' : 'rgba(218, 54, 51, 0.1)', border: `1px solid ${verification.isValid ? '#3fb950' : '#da3633'}`, padding: '12px', borderRadius: '8px', marginBottom: '20px', color: verification.isValid ? '#3fb950' : '#da3633', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {verification.isValid ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+                <span>{verification.message} {verification.blocksVerified !== undefined && `(${verification.blocksVerified} blocks)`}</span>
+              </div>
+            )}
+
             
             <div className="meta-grid">
               <div className="meta-item">

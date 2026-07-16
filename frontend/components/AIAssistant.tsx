@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Sparkles, User } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 /**
  * VaultIQ AI Assistant (V2)
@@ -20,21 +21,7 @@ export default function AIAssistant() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const getAIResponse = (input: string) => {
-    const lowInput = input.toLowerCase();
-    if (lowInput.includes('maintenance')) {
-      return "Analyzing telemetry... 🔍 Predictive Engine suggests Rack A-12 (Primary Web Server) requires thermal paste replacement within 14 days to avoid critical throttling.";
-    }
-    if (lowInput.includes('blockchain') || lowInput.includes('audit')) {
-      return "All ledger entries are synced! 🔗 Integrity check is at 100%. The most recent anchor was for asset LAP-442 at 14:22 UTC.";
-    }
-    if (lowInput.includes('budget') || lowInput.includes('cost')) {
-      return "Projected depreciation for Q3 is $12,400. 💰 I recommend prioritizing the replacement of 5 workstations in Studio 4 to maintain 99.9% operational uptime.";
-    }
-    return "I've processed your request! ✨ Based on current inventory metrics, your asset utilization is at 84%. Would you like me to generate a detailed lifecycle report?";
-  };
-
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!query.trim()) return;
     
     const userMessage = query;
@@ -42,13 +29,24 @@ export default function AIAssistant() {
     setQuery('');
     setIsTyping(true);
 
-    setTimeout(() => {
+    try {
+      const res = await apiFetch('/analytics/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userMessage })
+      });
       setIsTyping(false);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: getAIResponse(userMessage)
+        content: res.response || "I didn't receive a proper response from the core."
       }]);
-    }, 1500);
+    } catch (error) {
+      setIsTyping(false);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Error communicating with VaultIQ-Core.'
+      }]);
+    }
   };
 
   return (

@@ -92,6 +92,13 @@ export class AssetController {
     return this.assetService.getAuditHash(id);
   }
 
+  @Get(':id/verify-audit')
+  @ApiOperation({ summary: 'Verify the cryptographic integrity of the asset audit trail' })
+  @ApiParam({ name: 'id', description: 'Asset UUID or Tag ID' })
+  async verifyAudit(@Param('id') id: string) {
+    return this.assetService.verifyAuditIntegrity(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a single asset by UUID or Tag ID' })
   @ApiParam({ name: 'id', description: 'Asset UUID or Tag ID' })

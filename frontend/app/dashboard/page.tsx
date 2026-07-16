@@ -1,8 +1,27 @@
 'use client';
+
 import React from 'react';
-import { Laptop, RotateCcw, Wrench, Plus, CheckCircle, Archive, TrendingUp, Package, Users, AlertTriangle } from 'lucide-react';
 import useSWR from 'swr';
+import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../lib/api';
+import {
+  Laptop,
+  RotateCcw,
+  Wrench,
+  Plus,
+  CheckCircle,
+  Archive,
+  TrendingUp,
+  Package,
+  Users,
+  AlertTriangle,
+  Sparkles,
+  Info,
+  Activity,
+  Shield,
+  ArrowRight,
+} from 'lucide-react';
+import DigitalTwin from '../../components/DigitalTwin';
 
 const fetcher = (url: string) => apiFetch(url);
 
@@ -16,231 +35,250 @@ function timeAgo(ts: string): string {
 }
 
 function activityIcon(type: string) {
-  if (type === 'checkout') return <Laptop size={15} />;
-  if (type === 'checkin') return <RotateCcw size={15} />;
-  if (type === 'maintenance') return <Wrench size={15} />;
-  if (type === 'added') return <Plus size={15} />;
-  if (type === 'retired') return <Archive size={15} />;
-  return <CheckCircle size={15} />;
+  if (type === 'checkout') return <Laptop size={14} />;
+  if (type === 'checkin') return <RotateCcw size={14} />;
+  if (type === 'maintenance') return <Wrench size={14} />;
+  if (type === 'added') return <Plus size={14} />;
+  if (type === 'retired') return <Archive size={14} />;
+  return <CheckCircle size={14} />;
 }
 
 const SkeletonDashboard = () => (
-  <div className="dashboard-container">
-    <header className="page-header">
-      <div className="skeleton-box" style={{ width: '250px', height: '32px', marginBottom: '8px', borderRadius: '4px' }}></div>
-      <div className="skeleton-box" style={{ width: '400px', height: '16px', borderRadius: '4px' }}></div>
-    </header>
-    <div className="stats-grid">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="stat-card card">
-          <div className="skeleton-box" style={{ width: '36px', height: '36px', borderRadius: '8px', marginBottom: '6px' }}></div>
-          <div className="skeleton-box" style={{ width: '60px', height: '32px', borderRadius: '4px', marginBottom: '6px' }}></div>
-          <div className="skeleton-box" style={{ width: '100px', height: '14px', borderRadius: '4px' }}></div>
+  <div className="mission-control-container">
+    <div className="skeleton-box" style={{ width: '280px', height: '36px', marginBottom: '8px' }} />
+    <div className="skeleton-box" style={{ width: '450px', height: '18px', marginBottom: '24px' }} />
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '24px' }}>
+          <div className="skeleton-box" style={{ height: '180px', borderRadius: '16px' }} />
+          <div className="skeleton-box" style={{ height: '180px', borderRadius: '16px' }} />
         </div>
-      ))}
-    </div>
-    <div className="dashboard-grid">
-      <section className="activity-section card">
-        <div className="skeleton-box" style={{ width: '150px', height: '24px', marginBottom: '16px', borderRadius: '4px' }}></div>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-            <div className="skeleton-box" style={{ width: '30px', height: '30px', borderRadius: '8px' }}></div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div className="skeleton-box" style={{ width: '120px', height: '14px', borderRadius: '4px' }}></div>
-              <div className="skeleton-box" style={{ width: '80px', height: '12px', borderRadius: '4px' }}></div>
-            </div>
-          </div>
-        ))}
-      </section>
-      <section className="breakdown-section card">
-        <div className="skeleton-box" style={{ width: '150px', height: '24px', marginBottom: '16px', borderRadius: '4px' }}></div>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '12px', alignItems: 'center' }}>
-            <div className="skeleton-box" style={{ width: '60px', height: '14px', borderRadius: '4px' }}></div>
-            <div className="skeleton-box" style={{ flex: 1, height: '6px', borderRadius: '4px' }}></div>
-            <div className="skeleton-box" style={{ width: '20px', height: '14px', borderRadius: '4px' }}></div>
-          </div>
-        ))}
-      </section>
+        <div className="skeleton-box" style={{ height: '360px', borderRadius: '16px' }} />
+      </div>
+      <div className="skeleton-box" style={{ height: '580px', borderRadius: '16px' }} />
     </div>
   </div>
 );
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const { data: summary, error } = useSWR('/assets/summary', fetcher, { refreshInterval: 5000 });
 
-  if (error) return <div style={{ padding: 40, color: 'red' }}>Failed to load dashboard</div>;
+  if (error) {
+    return (
+      <div className="mission-control-container" style={{ justifyContent: 'center', alignItems: 'center', minHeight: '80vh', display: 'flex' }}>
+        <div className="card-premium" style={{ padding: '40px', textAlign: 'center', maxWidth: '500px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ padding: '16px', background: 'rgba(248, 81, 73, 0.1)', borderRadius: '50%', color: 'var(--accent-danger)' }}>
+            <AlertTriangle size={48} />
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#fff' }}>Connection Failed</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.5, margin: 0 }}>
+            Unable to reach VaultIQ Core Services. Please ensure the backend server and PostgreSQL database are running and accessible.
+          </p>
+          <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem', color: '#ff7b78', fontFamily: 'monospace' }}>
+            {error?.message || 'Network Error: Connection refused'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!summary) return <SkeletonDashboard />;
 
   const { stats, recentActivities, assetsByType } = summary;
-  const maxCount = Math.max(...(assetsByType || []).map((x: any) => x.count), 1);
 
-  const cards = [
-    { label: 'Total Assets', value: stats.total, status: 'primary', icon: <Package size={20} /> },
-    { label: 'Assigned', value: stats.assigned, status: 'success', icon: <Users size={20} /> },
-    { label: 'In Maintenance', value: stats.maintenance, status: 'warning', icon: <AlertTriangle size={20} /> },
-    { label: 'Utilization', value: `${stats.utilization}%`, status: 'info', icon: <TrendingUp size={20} /> },
-  ];
+  // Extract counts for quick-status-grid
+  const total = stats.total || 0;
+  const assigned = stats.assigned || 0;
+  const maintenance = stats.maintenance || 0;
+  const available = total - assigned - maintenance;
 
   return (
-    <div className="dashboard-container">
-      <header className="page-header">
-        <h1 className="page-title">Operational Overview</h1>
-        <p className="page-subtitle">Real-time insights into your office inventory and asset lifecycle.</p>
+    <div className="mission-control-container">
+      {/* Dashboard Top Header */}
+      <header className="mission-control-header">
+        <div>
+          <h1 className="page-title" style={{ fontSize: '2rem', fontWeight: 800 }}>
+            Good Morning, {user?.fullName?.split(' ')[0] || 'Gokul'} 👋
+          </h1>
+          <div className="header-meta">
+            <span className="pulse-dot" />
+            <span>VaultIQ Engine Live</span>
+            <span style={{ color: 'var(--text-muted)' }}>·</span>
+            <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn btn-premium-secondary" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <Activity size={14} /> System Health
+          </button>
+        </div>
       </header>
 
-      <div className="stats-grid">
-        {cards.map((card, i) => (
-          <div key={i} className={`stat-card card stat-${card.status}`}>
-            <div className="stat-icon-row">
-              <span className="stat-icon">{card.icon}</span>
-            </div>
-            <div className="stat-value">{card.value}</div>
-            <div className="stat-label">{card.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="dashboard-grid">
-        <section className="activity-section card">
-          <h2 className="section-title">Recent Activity</h2>
-          <ul className="activity-list">
-            {recentActivities.map((act: any) => (
-              <li key={act.id} className="activity-item">
-                <span className={`activity-icon act-${act.type}`}>
-                  {activityIcon(act.type)}
-                </span>
-                <div className="activity-details">
-                  <span className="activity-name">{act.assetName}</span>
-                  <span className="activity-tag">{act.tagId}</span>
-                  <span className="activity-user">{act.user}</span>
-                </div>
-                <span className="activity-time">{timeAgo(act.timestamp)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="breakdown-section card">
-          <h2 className="section-title">Asset Breakdown</h2>
-          <ul className="breakdown-list">
-            {assetsByType.map((item: any) => (
-              <li key={item.type} className="breakdown-item">
-                <span className="breakdown-type">{item.type}</span>
-                <div className="breakdown-bar-wrap">
-                  <div
-                    className="breakdown-bar"
-                    style={{ width: `${(item.count / maxCount) * 100}%` }}
+      {/* Main Layout Grid */}
+      <div className="dashboard-layout-grid">
+        {/* Main Column */}
+        <div className="dashboard-main-strip">
+          {/* Health Score & Status overview */}
+          <div className="health-summary-row">
+            {/* Health dial */}
+            <div className="health-score-card card-premium">
+              <span style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '12px' }}>Organization Health</span>
+              <div className="health-radial-wrap">
+                <svg width="110" height="110" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.04)"
+                    strokeWidth="3"
                   />
-                </div>
-                <span className="breakdown-count">{item.count}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="utilization-block">
-            <span>Utilization Rate</span>
-            <strong>{stats.utilization}%</strong>
-          </div>
-        </section>
-      </div>
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="var(--accent-success)"
+                    strokeDasharray="98, 100"
+                    strokeWidth="3.2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="health-percentage">98%</div>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>All systems performing within spec</span>
+            </div>
 
-      <style>{`
-        .dashboard-container {
-          padding: 28px 32px;
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-          max-width: 1200px;
-          min-height: calc(100vh - 80px);
-        }
-        .page-header { margin-bottom: 4px; }
-        .page-title { font-size: 1.75rem; font-weight: 800; margin: 0; }
-        .page-subtitle { color: var(--text-secondary); margin-top: 6px; font-size: 0.9rem; }
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-        }
-        @media (max-width: 900px) {
-          .stats-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 500px) {
-          .stats-grid { grid-template-columns: 1fr; }
-        }
-        .stat-card {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          padding: 20px 22px;
-          border-radius: 12px;
-        }
-        .stat-icon-row { margin-bottom: 4px; }
-        .stat-icon {
-          display: inline-flex;
-          padding: 8px;
-          border-radius: 8px;
-          background: rgba(var(--icon-bg, 88, 166, 255), 0.1);
-        }
-        .stat-primary .stat-icon { color: var(--accent-primary); }
-        .stat-success .stat-icon { color: #3fb950; }
-        .stat-warning .stat-icon { color: #d29922; }
-        .stat-info .stat-icon { color: #58a6ff; }
-        .stat-primary .stat-value { color: var(--accent-primary); }
-        .stat-success .stat-value { color: #3fb950; }
-        .stat-warning .stat-value { color: #d29922; }
-        .stat-info .stat-value { color: #58a6ff; }
-        .stat-value { font-size: 2rem; font-weight: 800; line-height: 1; }
-        .stat-label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 500; }
-        .dashboard-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-        }
-        @media (max-width: 768px) {
-          .dashboard-grid { grid-template-columns: 1fr; }
-        }
-        .section-title { font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
-        .activity-section, .breakdown-section { padding: 22px; border-radius: 12px; }
-        .activity-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
-        .activity-item { display: flex; align-items: center; gap: 12px; }
-        .activity-icon {
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 8px;
-          flex-shrink: 0;
-        }
-        .act-added { background: rgba(63,185,80,0.15); color: #3fb950; }
-        .act-checkout { background: rgba(88,166,255,0.15); color: var(--accent-primary); }
-        .act-checkin { background: rgba(210,153,34,0.15); color: #d29922; }
-        .act-maintenance { background: rgba(255,123,120,0.15); color: #ff7b78; }
-        .act-retired { background: rgba(139,148,158,0.15); color: #8b949e; }
-        .activity-details { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-        .activity-name { font-weight: 600; font-size: 0.88rem; }
-        .activity-tag { font-size: 0.73rem; color: var(--accent-primary); }
-        .activity-user { font-size: 0.73rem; color: var(--text-secondary); }
-        .activity-time { font-size: 0.73rem; color: var(--text-muted); flex-shrink: 0; }
-        .breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
-        .breakdown-item { display: flex; align-items: center; gap: 10px; }
-        .breakdown-type { width: 80px; font-size: 0.82rem; flex-shrink: 0; color: var(--text-secondary); }
-        .breakdown-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
-        .breakdown-bar { height: 100%; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); border-radius: 4px; transition: width 0.5s ease; }
-        .breakdown-count { width: 24px; text-align: right; font-size: 0.82rem; font-weight: 700; flex-shrink: 0; }
-        .utilization-block {
-          margin-top: 20px;
-          padding-top: 16px;
-          border-top: 1px solid var(--border-color);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 0.9rem;
-          color: var(--text-secondary);
-        }
-        .utilization-block strong { font-size: 1.4rem; color: var(--accent-primary); }
-      `}
-      </style>
+            {/* Quick Status Cards */}
+            <div className="quick-status-grid">
+              <div className="quick-status-card card-premium">
+                <div className="status-card-header">
+                  <span>ACTIVE</span>
+                  <Users size={14} style={{ color: 'var(--accent-primary)' }} />
+                </div>
+                <div className="status-card-val active">{assigned}</div>
+              </div>
+              <div className="quick-status-card card-premium">
+                <div className="status-card-header">
+                  <span>AVAILABLE</span>
+                  <Package size={14} style={{ color: 'var(--accent-success)' }} />
+                </div>
+                <div className="status-card-val" style={{ color: 'var(--accent-success)' }}>{available}</div>
+              </div>
+              <div className="quick-status-card card-premium">
+                <div className="status-card-header">
+                  <span>CRITICAL</span>
+                  <AlertTriangle size={14} style={{ color: 'var(--accent-danger)' }} />
+                </div>
+                <div className="status-card-val critical">{maintenance}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive 3D Digital Twin Office Preview */}
+          <section className="interactive-twin-section card-premium">
+            <div className="interactive-twin-header">
+              <h2 className="interactive-twin-title">
+                <Activity size={18} style={{ color: 'var(--accent-primary)' }} />
+                Digital Twin Server Room (Visual Telemetry)
+              </h2>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.04)', padding: '4px 10px', borderRadius: '12px' }}>
+                Live 3D Render
+              </span>
+            </div>
+            <div className="mini-twin-viewport">
+              <DigitalTwin status="HEALTHY" type="SERVER" />
+            </div>
+          </section>
+
+          {/* AI recommendations & suggestion block */}
+          <section className="ai-insights-panel card-premium glow-border">
+            <h2 className="ai-insights-header">
+              <Sparkles size={18} />
+              AI Operations Assistant Insights
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="ai-suggestion-item">
+                <strong>⚡ AI Incident Summary: Thermal Spike Warning</strong>
+                <span>
+                  Dell PowerEdge R750 (tag `VIQ-SV-001`) in R&D Lab is reaching 95°C causing high thermal throttling. Heuristics show fan 3 failure. We recommend scheduling immediate cleaning and fan replacement before node degradation.
+                </span>
+              </div>
+              <div className="ai-suggestion-item">
+                <strong>🔮 AI Procurement Recommendation</strong>
+                <span>
+                  A request for "200 laptops under ₹70 lakh" was processed. AI recommends Lenovo ThinkPad L14 Gen 4 at ₹32,000 each (Total ₹64 lakh) leaving ₹6 lakh headroom. Expected lifecycle: 3 years.
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Right Sidebar Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+          {/* Today's Alerts */}
+          <section className="card-premium" style={{ padding: '24px' }}>
+            <h2 className="section-title" style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={16} style={{ color: 'var(--accent-warning)' }} />
+              Today's Alerts
+            </h2>
+            <ul className="alerts-list">
+              <li className="alert-item">
+                <div className="alert-icon critical"><AlertTriangle size={14} /></div>
+                <div className="alert-details">
+                  <span className="alert-title">PowerEdge R750 Thermal Spike</span>
+                  <span className="alert-time">High warning · 10m ago</span>
+                </div>
+              </li>
+              <li className="alert-item">
+                <div className="alert-icon warning"><Info size={14} /></div>
+                <div className="alert-details">
+                  <span className="alert-title">MacBook Pro M3 Max Checkout</span>
+                  <span className="alert-time">Custody assignment · 2h ago</span>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          {/* Recent Activity Logs */}
+          <section className="card-premium" style={{ padding: '24px' }}>
+            <h2 className="section-title" style={{ fontSize: '1rem', fontWeight: 700, color: '#fff', marginBottom: '16px' }}>
+              Recent Audit Trails
+            </h2>
+            <ul className="activity-list" style={{ gap: '14px' }}>
+              {recentActivities.slice(0, 4).map((act: any) => (
+                <li key={act.id} className="activity-item" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '0' }}>
+                  <span className={`activity-icon act-${act.icon}`} style={{ width: '28px', height: '28px', borderRadius: '8px' }}>
+                    {activityIcon(act.icon)}
+                  </span>
+                  <div className="activity-details">
+                    <span className="activity-name" style={{ fontSize: '0.82rem', fontWeight: 600 }}>{act.action}</span>
+                    <span className="activity-user" style={{ fontSize: '0.72rem' }}>by {act.user}</span>
+                  </div>
+                  <span className="activity-time" style={{ fontSize: '0.72rem' }}>{timeAgo(act.time)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Platform Quick links */}
+          <section className="card-premium" style={{ padding: '24px' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>Compliance Summary</h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
+              <Shield size={16} style={{ color: 'var(--accent-success)' }} />
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Ledger Cryptochain Secure (SHA-256)</span>
+            </div>
+            <hr style={{ border: 'none', borderBottom: '1px solid var(--border-color)', marginBottom: '14px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>ISO 27001 Status</span>
+                <span style={{ color: 'var(--accent-success)', fontWeight: 600 }}>COMPLIANT</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>SOC2 Status</span>
+                <span style={{ color: 'var(--accent-success)', fontWeight: 600 }}>COMPLIANT</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

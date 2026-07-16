@@ -20,7 +20,7 @@ export function middleware(request: NextRequest) {
 
   // Auth is handled client-side with AuthContext, but middleware prevents flash of unauthorized content
   if (pathname === '/') {
-    return NextResponse.redirect(new URL(token ? '/dashboard' : '/login', request.url));
+    return NextResponse.next();
   }
 
   // Protect all other non-public routes

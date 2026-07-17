@@ -1,76 +1,97 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, setAuthToken, clearAuthToken } from '../lib/api';
+import { authApi, vaultApi, setAuthToken, clearAuthToken } from '../lib/api';
 
-interface User {
+export interface UserProfile {
   id: string;
   email: string;
   fullName: string;
-  role: 'ADMIN' | 'MANAGER' | 'USER';
+  role: string;
+  tier: 'FREE' | 'PRO' | 'ENTERPRISE' | 'ORGANIZATION';
+  salt: string;
+  totpEnabled: boolean;
+  autoLockMinutes: number;
+  themePreference: string;
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   loading: boolean;
-  login: (email: string) => Promise<void>;
+  register: (email: string, fullName: string, masterPassword: string) => Promise<{ recoveryCode?: string; user: UserProfile }>;
+  login: (email: string, masterPassword: string) => Promise<UserProfile>;
   logout: () => void;
 }
 
 const STORAGE_KEY = 'vaultiq_user';
+const TOKEN_COOKIE = 'vaultiq_token';
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: async () => {},
+  register: async () => ({} as any),
+  login: async () => ({} as any),
   logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Restore session from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         setUser(JSON.parse(stored));
-        // Retrieve token from cookie to set on apiFetch if we want it in memory too
-        const token = document.cookie.split('; ').find(row => row.startsWith('vaultiq_token='))?.split('=')[1];
+        const token = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith(`${TOKEN_COOKIE}=`))
+          ?.split('=')[1];
         if (token) setAuthToken(token);
       }
     } catch {}
     setLoading(false);
   }, []);
 
-  const login = async (email: string) => {
-    try {
-      const data = await apiFetch('/auth/dev-login', {
-        method: 'POST',
-        body: JSON.stringify({ email })
-      });
-      const { access_token, user: loggedInUser } = data;
-      setAuthToken(access_token);
-      document.cookie = `vaultiq_token=${access_token}; path=/; max-age=86400`;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedInUser));
-      setUser(loggedInUser);
-      router.push('/dashboard');
-    } catch (err: any) {
-      alert(err.message || 'Login failed');
-    }
+  const persistSession = (token: string, userObj: UserProfile) => {
+    setAuthToken(token);
+    document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${15 * 60}; SameSite=Strict`;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userObj));
+    setUser(userObj);
+  };
+
+  const register = async (
+    email: string,
+    fullName: string,
+    masterPassword: string,
+  ): Promise<{ recoveryCode?: string; user: UserProfile }> => {
+    const data = await authApi.register(email, fullName, masterPassword);
+    persistSession(data.access_token, data.user);
+    router.push('/dashboard');
+    return { recoveryCode: data.user.recoveryCode, user: data.user };
+  };
+
+  const login = async (email: string, masterPassword: string): Promise<UserProfile> => {
+    const data = await authApi.login(email, masterPassword);
+    persistSession(data.access_token, data.user);
+    router.push('/dashboard');
+    return data.user;
   };
 
   const logout = () => {
+    authApi.logout().catch(() => {}); // best-effort server-side revoke
     clearAuthToken();
-    document.cookie = 'vaultiq_token=; path=/; max-age=0';
+    document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0`;
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.clear();
     setUser(null);
     router.push('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

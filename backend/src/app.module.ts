@@ -4,17 +4,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
-import { AssetsModule } from './assets/assets.module';
-import { BlockchainModule } from './blockchain/blockchain.module';
-import { MaintenanceModule } from './maintenance/maintenance.module';
-import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { ReportsModule } from './reports/reports.module';
-import { HrModule } from './hr/hr.module';
-import { FacilitiesModule } from './facilities/facilities.module';
-import { ProcurementModule } from './procurement/procurement.module';
-import { AnalyticsModule } from './analytics/analytics.module';
+import { VaultModule } from './vault/vault.module';
 
 @Module({
   imports: [
@@ -25,17 +16,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
 
     PrismaModule,
-    AssetsModule,
-    BlockchainModule,
-    MaintenanceModule,
-    HelpdeskModule,
     AuthModule,
-    UsersModule,
-    ReportsModule,
-    HrModule,
-    FacilitiesModule,
-    ProcurementModule,
-    AnalyticsModule,
+    VaultModule,
   ],
   controllers: [AppController],
   providers: [

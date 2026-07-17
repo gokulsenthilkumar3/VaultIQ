@@ -1,49 +1,97 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
-import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Request,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { RequestWithUser } from './request-with-user.interface';
 
-class DevLoginDto {
-  @ApiProperty({ example: 'user@vaultiq.dev' })
+class RegisterDto {
   @IsEmail()
   email!: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  fullName!: string;
+
+  @IsString()
+  @MinLength(12)
+  @MaxLength(128)
+  masterPassword!: string;
 }
 
-class RefreshTokenDto {
-  @ApiProperty({ description: 'Opaque refresh token obtained from login or previous refresh call' })
+class LoginDto {
+  @IsEmail()
+  email!: string;
+
   @IsString()
-  @IsNotEmpty()
+  @MinLength(1)
+  masterPassword!: string;
+}
+
+class RefreshDto {
+  @IsString()
   refresh_token!: string;
 }
 
-@ApiTags('Auth')
+class RecoverDto {
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  recoveryCode!: string;
+
+  @IsString()
+  @MinLength(12)
+  @MaxLength(128)
+  newMasterPassword!: string;
+}
+
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('dev-login')
+  @Post('register')
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto.email, dto.fullName, dto.masterPassword);
+  }
+
+  @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '[Dev only] Login with an email — disabled in production' })
-  async devLogin(@Body() dto: DevLoginDto) {
-    return this.authService.devLogin(dto.email);
+  async login(@Body() dto: LoginDto) {
+    return this.authService.login(dto.email, dto.masterPassword);
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Exchange a refresh token for a new access + refresh token pair' })
-  async refresh(@Body() dto: RefreshTokenDto) {
+  async refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refresh_token);
   }
 
-  @Post('logout')
+  @Post('recover')
+  @HttpCode(HttpStatus.OK)
+  async recover(@Body() dto: RecoverDto) {
+    return this.authService.recoverAccount(dto.email, dto.recoveryCode, dto.newMasterPassword);
+  }
+
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Revoke all refresh tokens for the authenticated user (logout)' })
-  async logout(@Req() req: RequestWithUser) {
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Request() req: any) {
     await this.authService.revokeAllTokens(req.user.userId);
+    return { message: 'Logged out successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@Request() req: any) {
+    return { userId: req.user.userId, email: req.user.email, role: req.user.role };
   }
 }

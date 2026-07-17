@@ -10,6 +10,6 @@ interface RoleGuardProps {
 
 export default function RoleGuard({ roles, children, fallback = null }: RoleGuardProps) {
   const { user } = useAuth();
-  if (!user || !roles.includes(user.role)) return <>{fallback}</>;
+  if (!user || !roles.includes(user.role as 'ADMIN' | 'MANAGER' | 'USER')) return <>{fallback}</>;
   return <>{children}</>;
 }
